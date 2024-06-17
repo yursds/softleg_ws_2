@@ -13,7 +13,7 @@ from ament_index_python.packages        import get_package_share_path
 
 def generate_launch_description():
     
-    URDF_FILE = 'softlegisaac.urdf'
+    URDF_FILE = 'softleg.urdf'
 
     # path for build softleg urdf
     softleg_robot_path = get_package_share_path("softleg_description")

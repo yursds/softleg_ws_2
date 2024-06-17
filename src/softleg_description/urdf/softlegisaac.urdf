@@ -3,24 +3,21 @@
 <robot name="softlegisaac">
 
   <material name="SoftLeg/Base">
-    <color rgba="0.2 0.2 0.2 0.7"/>
+    <color rgba="0.7 0.7 0.7 1.0"/>
   </material>
   <material name="SoftLeg/Thigh">
-    <color rgba="0.3 0.3 0.3 0.7"/>
+    <color rgba="0.8 0.8 0.8 1.0"/>
   </material>    
   <material name="SoftLeg/Calf">
-    <color rgba="0.2 0.2 0.2 0.7"/>
+    <color rgba="0.7 0.7 0.7 1.0"/>
   </material>
   <material name="SoftLeg/Cart">
-    <color rgba="0.5 0.5 0.5 0.7"/>
+    <color rgba="1.0 1.0 1.0 1.0"/>
   </material>
   <material name="SoftLeg/Red">
-    <color rgba="1.0 0.0 0.0 0.6"/>
+    <color rgba="1.0 0.0 0.0 1.0"/>
   </material>
-  
-  <!-- -1) World Link -->
-  <link name="world"/>
-  
+
   <!-- 0) World Joint -->
   <joint name="rootJoint" type="fixed">
     <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
@@ -66,7 +63,10 @@
     <child link="contact_link"/>
   </joint> -->
 
-
+  
+  <!-- -1) World Link -->
+  <link name="world"/>
+  
   <!-- 0) Cart Link -->
   <link name="softleg_1_cart_link">
     <inertial>
@@ -82,6 +82,7 @@
         <mesh filename="package://softleg_description/meshes/cart.stl" scale="0.001 0.001 0.001"/>
         <!-- <mesh filename="package://softleg_description/meshes/softleg_1_cart_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
       </geometry>
+      <material name="SoftLeg/Cart"/>
     </visual>
     <!-- <collision>
       <origin xyz="0. 0. 0." rpy="0. 0. -3.1415925"/>
@@ -106,6 +107,7 @@
       <mesh filename="package://softleg_description/meshes/base.stl" scale="0.001 0.001 0.001"/>
         <!-- <mesh filename="package://softleg_description/meshes/softleg_1_base_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
       </geometry>
+      <material name="SoftLeg/Base"/>
     </visual>
     <collision>
     <origin xyz="-0.0004043 -0.256 0.04 " rpy="0. 0. -1.5707964"/>
@@ -133,6 +135,7 @@
         <mesh filename="package://softleg_description/meshes/thigh.stl" scale="0.001 0.001 0.001"/>
         <!-- <mesh filename="package://softleg_description/meshes/softleg_1_thigh_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
       </geometry>
+      <material name="SoftLeg/Thigh"/>
     </visual>
     <collision>
     <origin xyz="0.0125 -0.1840615 0. " rpy="1.5707964 0. -1.5707964"/>
@@ -160,6 +163,7 @@
         <mesh filename="package://softleg_description/meshes/calf.stl" scale="0.001 0.001 0.001"/>
         <!-- <mesh filename="package://softleg_description/meshes/softleg_1_calf_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
       </geometry>
+      <material name="SoftLeg/Calf"/>
     </visual>
     <collision>
     <origin xyz="0.018 0. 0.175" rpy="0. -1.5707963 0. "/>
@@ -196,7 +200,7 @@
   </gazebo> -->
   <gazebo>
     <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
-        <parameters>/home/yurs/softleg_ws_2/src/softleg_gazebo/config/softleg_gazebo_sim_jnt_PD.yaml</parameters>
+      <parameters>/home/yurs/softleg_ws_2/src/softleg_gazebo/config/softleg_gazebo_sim_jnt_PD.yaml</parameters>
     </plugin>
   </gazebo>
   
@@ -204,7 +208,7 @@
     <hardware>
         <plugin>gazebo_ros2_control/GazeboSystem</plugin>
     </hardware>
-  
+    
     <joint name="softleg_1_cart_joint">
       <!-- <command_interface name="effort" /> -->
       <state_interface name="position">
@@ -214,8 +218,8 @@
         <param name="initial_value">0.0</param>
       </state_interface>
       <state_interface name="effort" />
-    </joint>     
-  
+    </joint>
+    
     <joint name="softleg_1_hip_joint">
       <command_interface name="effort" />
       <state_interface name="position">
@@ -226,7 +230,7 @@
       </state_interface>
       <state_interface name="effort" />
     </joint>
-  
+    
     <joint name="softleg_1_knee_joint">
       <command_interface name="effort" />
       <state_interface name="position">
@@ -237,6 +241,7 @@
       </state_interface>
       <state_interface name="effort" />
     </joint>
+  
   </ros2_control>
 
   <gazebo reference="softleg_1_cart_link">

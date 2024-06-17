@@ -1,0 +1,16 @@
+rosdep update --rosdistro=$ROS_DISTRO
+sudo apt-get update
+rosdep install --from-paths src --ignore-src -r -y
+
+. /opt/ros/${ROS_DISTRO}/setup.sh
+colcon build --symlink-install && . install/setup.bash
+source /opt/ros/${ROS_DISTRO}/setup.bash
+
+mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws/
+vcs import --input https://raw.githubusercontent.com/ros-controls/ros2_control_ci/master/ros_controls.$ROS_DISTRO.repos src
+rosdep update --rosdistro=$ROS_DISTRO
+sudo apt-get update
+rosdep install --from-paths src --ignore-src -r -y
+. /opt/ros/${ROS_DISTRO}/setup.sh
+colcon build --symlink-install

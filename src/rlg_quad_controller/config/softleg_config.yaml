@@ -1,0 +1,8 @@
+# config.yaml
+## real robot 
+inference_controller:
+  ros__parameters:
+    joint_state_topic: "/state_broadcaster/joint_states"
+    joint_target_pos_topic: "/joint_controller/command"
+    rate: 10
+    simulation: False

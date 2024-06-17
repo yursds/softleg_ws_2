@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  
+  <material name="SoftLeg/DarkGrey">
+    <color rgba="0.3 0.3 0.3 1.0"/>
+  </material>
+  
+  <material name="SoftLeg/LightGrey">
+    <color rgba="0.8 0.8 0.8 1.0"/>
+  </material>
+
+  <material name="SoftLeg/Black">
+    <color rgba="0 0 0 1.0"/>
+  </material>
+
+  <material name="SoftLeg/Silver">
+    <color rgba="1.0 1.0 1.0 1.0"/>
+  </material>
+
+  <material name="SoftLeg/Grey">
+    <color rgba="0.7 0.7 0.7 1.0"/>
+  </material>
+
+</robot>

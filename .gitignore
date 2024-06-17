@@ -1,0 +1,14 @@
+/b=nmap_output
+/build
+/install
+/log
+/test_experiments_1001_terra
+/test_experiments_1002_terra
+/test_experiments_1003_terra_girato_video2
+/test_experiments_1004_terra_girato_video3
+/test_experiments_1004_terra_girato_video_vince_1
+/test_experiments_1004_terra_girato_video_vince_2
+/test_experiments_1004_terra_girato_video_vince_3
+/test_experiments_1004_terra_girato_video_vince_4_kp20
+/test_experiments_1004_terra_girato_video_vince_5_cavobloccato
+/video_rl_jump

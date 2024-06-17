@@ -1,0 +1,146 @@
+<?xml version="1.0"?>
+<robot name="softlegisaac">
+  <link name="world"/>
+  <joint name="fixed" type="fixed">
+    <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+    <parent link="world"/>
+    <child link="softleg_1_cart_link"/>
+  </joint>
+  <joint name="softleg_1_cart_joint" type="prismatic">
+    <origin xyz="0. -0.01 2. " rpy="3.1415927 -1.5707963 0. "/>
+    <parent link="softleg_1_cart_link"/>
+    <child link="softleg_1_base_link"/>
+    <axis xyz="1. 0. 0."/>
+    <limit lower="-2." upper="3." effort="6000." velocity="1000000."/>
+  </joint>
+  <joint name="softleg_1_hip_joint" type="revolute">
+    <origin xyz="0. -0.255 0.07 " rpy="0. -1.5707963 0. "/>
+    <parent link="softleg_1_base_link"/>
+    <child link="softleg_1_thigh_link"/>
+    <axis xyz="1. 0. 0."/>
+    <limit lower="-3.1415927" upper="3.1415927" effort="100." velocity="100.000003"/>
+  </joint>
+  <joint name="softleg_1_knee_joint" type="revolute">
+    <origin xyz="0.0275 -0.175 0. " rpy="1.5707964 0. 0. "/>
+    <parent link="softleg_1_thigh_link"/>
+    <child link="softleg_1_calf_link"/>
+    <axis xyz="1. 0. 0."/>
+    <limit lower="-3.1415927" upper="3.1415927" effort="100." velocity="100.000003"/>
+  </joint>
+  <link name="softleg_1_base_link">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <mass value="0.9724552"/>
+      <inertia ixx="0." ixy="0." ixz="0." iyy="0." iyz="0." izz="0."/>
+    </inertial>
+    <visual>
+      <origin xyz="0. 0. 0." rpy="0. 0. -1.5707964"/>
+      <geometry>
+        <mesh filename="/home/michele/jumpsim_exp_ws/src/softleg_description/meshes/softleg_1_base_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.0004043 -0.252446 0.0551667" rpy="0. 0. -1.5707964"/>
+      <geometry>
+        <cylinder radius="0.035" length="0.06"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="softleg_1_calf_link">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <!-- <mass value="0.0762175"/> -->
+      <mass value="0.046942"/>
+      <inertia ixx="0." ixy="0." ixz="0." iyy="0." iyz="0." izz="0."/>
+      <!-- <inertia ixx="5.140780e-06" ixy="1.089102e-05" ixz="-2.468115e-08" iyy="0.00021242" iyz="-2.702972e-09" izz="0.00021154"/> -->
+    </inertial>
+    <visual>
+      <origin xyz="0. 0. 0." rpy="0. -1.5707963 0. "/>
+      <geometry>
+        <mesh filename="/home/michele/jumpsim_exp_ws/src/softleg_description/meshes/softleg_1_calf_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.021 0. 0.175" rpy="0. -1.5707963 0. "/>
+      <geometry>
+        <cylinder radius="0.015" length="0.01"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="softleg_1_cart_link">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <!-- <mass value="0.00001"/> -->
+      <mass value="1000000."/>
+      <inertia ixx="0." ixy="0." ixz="0." iyy="0." iyz="0." izz="0."/>
+    </inertial>
+    <visual>
+      <origin xyz="0. 0. 0." rpy="0. 0. -3.1415925"/>
+      <geometry>
+        <mesh filename="/home/michele/jumpsim_exp_ws/src/softleg_description/meshes/softleg_1_cart_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </visual>
+  </link>
+  <link name="softleg_1_thigh_link">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <!-- <mass value="0.435789"/> -->
+      <mass value="0.47669673"/>
+      <inertia ixx="0." ixy="0." ixz="0." iyy="0." iyz="0." izz="0."/>
+      <!-- <inertia ixx="2.1574269e-04" ixy="3.3437484e-05" ixz="-2.4284668e-06" iyy="3.0607390e-03" iyz="-2.0388977e-06" izz="3.0504273e-03"/> -->
+    </inertial>
+    <visual>
+      <origin xyz="0. -0.073 0. " rpy="0. 0. -1.5707964"/>
+      <geometry>
+        <mesh filename="/home/michele/jumpsim_exp_ws/src/softleg_description/meshes/softleg_1_thigh_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.0165806 -0.1840615 0. " rpy="1.5707964 0. -1.5707964"/>
+      <geometry>
+        <cylinder radius="0.03" length="0.05"/>
+      </geometry>
+    </collision>
+  </link>
+
+
+  <gazebo>
+    <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+      <parameters>/home/michele/jumpsim_exp_ws/src/softleg_gazebo/config/softleg_gazebo_sim_jnt_PD.yaml</parameters>
+    </plugin>
+  </gazebo>
+  <ros2_control name="GazeboSystem" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+    <joint name="softleg_1_cart_joint">
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="softleg_1_hip_joint">
+      <command_interface name="effort"/>
+      <state_interface name="position">
+        <param name="initial_value">-0.785398163</param>
+      </state_interface>
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="softleg_1_knee_joint">
+      <command_interface name="effort"/>
+      <state_interface name="position">
+        <param name="initial_value">-0.785398163</param>
+      </state_interface>
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="effort"/>
+    </joint>
+  </ros2_control>
+</robot>

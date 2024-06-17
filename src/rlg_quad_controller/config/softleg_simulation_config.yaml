@@ -1,0 +1,11 @@
+# config.yaml
+
+inference_controller:
+  ros__parameters:
+    joint_state_topic: "/joint_states"
+    # joint_state_topic: "/Joint_Feedback"
+    joint_target_pos_topic: "/PD_control/command"
+    cmd_height_topic: "/cmd_height"
+    rate: 200 # Hz # this is computed from the config.yaml from isaac
+    simulation: True
+    use_sim_time: False

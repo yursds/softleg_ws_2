@@ -3,11 +3,14 @@ import os
 from launch_ros.actions                 import Node, SetParameter
 from launch_ros.substitutions           import FindPackageShare
 
+
 from launch                             import LaunchDescription
-from launch.actions                     import IncludeLaunchDescription, RegisterEventHandler
-from launch.substitutions               import PathJoinSubstitution
+from launch.actions                     import IncludeLaunchDescription, RegisterEventHandler, DeclareLaunchArgument
+
+from launch.substitutions               import PathJoinSubstitution, LaunchConfiguration
 from launch.launch_description_sources  import PythonLaunchDescriptionSource
 from launch.event_handlers              import OnProcessExit
+from launch.conditions                  import IfCondition, UnlessCondition
 
 from ament_index_python.packages        import get_package_share_directory
 
@@ -15,7 +18,7 @@ def generate_launch_description():
     
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([PathJoinSubstitution([FindPackageShare("gazebo_ros"), "launch", "gazebo.launch.py"])]),
-        launch_arguments={"pause": "true", "verbose": "false"}.items(),
+        launch_arguments={"pause": "false", "verbose": "true"}.items(),
     )
     
     softleg_description_path = os.path.join(
@@ -56,6 +59,7 @@ def generate_launch_description():
         arguments  = ["PD_control", "--controller-manager", "/controller_manager"],
     )
 
+    
     return LaunchDescription([
         
         SetParameter(name='use_sim_time', value=True),

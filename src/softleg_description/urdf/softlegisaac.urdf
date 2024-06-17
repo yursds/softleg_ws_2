@@ -79,16 +79,16 @@
     <visual>
       <origin xyz="0. 0. 0." rpy="0. 0. -3.1415925"/>
       <geometry>
-        <mesh filename="package://softleg_description/meshes/cart.stl" scale="0.001 0.001 0.001"/>
-        <!-- <mesh filename="package://softleg_description/meshes/softleg_1_cart_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
+        <mesh filename="/home/yurs/softleg_ws_2/src/softleg_description/meshes/cart.stl" scale="0.001 0.001 0.001"/>
+        <!-- <mesh filename="/home/yurs/softleg_ws_2/src/softleg_description/meshes/softleg_1_cart_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
       </geometry>
       <material name="SoftLeg/Cart"/>
     </visual>
     <!-- <collision>
       <origin xyz="0. 0. 0." rpy="0. 0. -3.1415925"/>
       <geometry>
-      <mesh filename="package://softleg_description/meshes/cart.stl" scale="0.001 0.001 0.001"/>
-        <mesh filename="package://softleg_description/meshes/softleg_1_cart_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
+      <mesh filename="/home/yurs/softleg_ws_2/src/softleg_description/meshes/cart.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/yurs/softleg_ws_2/src/softleg_description/meshes/softleg_1_cart_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision> -->
   </link>
@@ -104,8 +104,8 @@
     <visual>
       <origin xyz="0. 0. 0." rpy="0. 0. -1.5707964"/>
       <geometry>
-      <mesh filename="package://softleg_description/meshes/base.stl" scale="0.001 0.001 0.001"/>
-        <!-- <mesh filename="package://softleg_description/meshes/softleg_1_base_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
+      <mesh filename="/home/yurs/softleg_ws_2/src/softleg_description/meshes/base.stl" scale="0.001 0.001 0.001"/>
+        <!-- <mesh filename="/home/yurs/softleg_ws_2/src/softleg_description/meshes/softleg_1_base_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
       </geometry>
       <material name="SoftLeg/Base"/>
     </visual>
@@ -116,7 +116,7 @@
       </geometry>
       <!-- <origin xyz="0. 0. 0." rpy="0. 0. -1.5707964"/>
       <geometry>
-        <mesh filename="package://softleg_description/meshes/softleg_1_base_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/yurs/softleg_ws_2/src/softleg_description/meshes/softleg_1_base_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
       </geometry> -->
     </collision>
   </link>
@@ -132,8 +132,8 @@
     <visual>
       <origin xyz="0. -0.073 0. " rpy="0. 0. -1.5707964"/>
       <geometry>
-        <mesh filename="package://softleg_description/meshes/thigh.stl" scale="0.001 0.001 0.001"/>
-        <!-- <mesh filename="package://softleg_description/meshes/softleg_1_thigh_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
+        <mesh filename="/home/yurs/softleg_ws_2/src/softleg_description/meshes/thigh.stl" scale="0.001 0.001 0.001"/>
+        <!-- <mesh filename="/home/yurs/softleg_ws_2/src/softleg_description/meshes/softleg_1_thigh_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
       </geometry>
       <material name="SoftLeg/Thigh"/>
     </visual>
@@ -144,7 +144,7 @@
       </geometry>
       <!-- <origin xyz="0. -0.073 0. " rpy="0. 0. -1.5707964"/>
       <geometry>
-        <mesh filename="package://softleg_description/meshes/softleg_1_thigh_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/yurs/softleg_ws_2/src/softleg_description/meshes/softleg_1_thigh_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
       </geometry> -->
     </collision>
   </link>
@@ -160,8 +160,8 @@
     <visual>
       <origin xyz="-0. 0. -0." rpy="0. -1.5707963 0. "/>
       <geometry>
-        <mesh filename="package://softleg_description/meshes/calf.stl" scale="0.001 0.001 0.001"/>
-        <!-- <mesh filename="package://softleg_description/meshes/softleg_1_calf_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
+        <mesh filename="/home/yurs/softleg_ws_2/src/softleg_description/meshes/calf.stl" scale="0.001 0.001 0.001"/>
+        <!-- <mesh filename="/home/yurs/softleg_ws_2/src/softleg_description/meshes/softleg_1_calf_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
       </geometry>
       <material name="SoftLeg/Calf"/>
     </visual>
@@ -177,7 +177,7 @@
       </geometry> -->
       <!-- <origin xyz="-0. 0. -0." rpy="0. -1.5707963 0. "/>
       <geometry>
-        <mesh filename="package://softleg_description/meshes/softleg_1_calf_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/yurs/softleg_ws_2/src/softleg_description/meshes/softleg_1_calf_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
       </geometry> -->
     </collision>
     <!-- <lateral_friction value="1"/>

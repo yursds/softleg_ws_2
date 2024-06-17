@@ -6,7 +6,7 @@ controller_manager:
       type: joint_state_broadcaster/JointStateBroadcaster
     PD_control:
       type: rbt_pd_cnt/Rbt_PD_cnt
-      
+
 PD_control:
   ros__parameters:
     joint:

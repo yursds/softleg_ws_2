@@ -3,7 +3,6 @@ import os
 from launch_ros.actions                 import Node, SetParameter
 from launch_ros.substitutions           import FindPackageShare
 
-
 from launch                             import LaunchDescription
 from launch.actions                     import IncludeLaunchDescription, RegisterEventHandler
 
@@ -12,6 +11,7 @@ from launch.launch_description_sources  import PythonLaunchDescriptionSource
 from launch.event_handlers              import OnProcessExit
 
 from ament_index_python.packages        import get_package_share_directory
+
 
 def generate_launch_description():
     
@@ -47,7 +47,7 @@ def generate_launch_description():
         executable = "spawn_entity.py",
         arguments  = [
             "-topic", "robot_description", "-entity", "softleg",
-            "-x", "0.0", "-y", "0.0", "-z", "0.3", ],
+            "-x", "0.0", "-y", "0.0", "-z", "0.0", ],
         output     = "screen",
     )
 
@@ -73,13 +73,13 @@ def generate_launch_description():
         robot_state_pub,
         spawn_entity,
         RegisterEventHandler(
-            event_handler=OnProcessExit(
+            event_handler = OnProcessExit(
                 target_action = spawn_entity,
                 on_exit       = [joint_state_broadcaster_spawner],
             )
         ),
         RegisterEventHandler(
-            event_handler=OnProcessExit(
+            event_handler = OnProcessExit(
                 target_action = spawn_entity,
                 on_exit       = [PD_control],
             )

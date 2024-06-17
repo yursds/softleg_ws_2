@@ -11,7 +11,6 @@ from launch.event_handlers              import OnProcessExit
 import launch_ros.descriptions
 import launch
 
-
 def generate_launch_description():
 
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')

@@ -26,9 +26,9 @@
   </joint>
   
   <!-- 1) Base Joint - Fixed (moves along cart) -->
-  <joint name="softleg_1_cart_joint" type="prismatic">
+  <joint name="softleg_1_cart_joint" type="fixed">
     <!-- <origin xyz="0. -0.01 0.0 " rpy="3.1415927 -1.5707963 0. "/> -->
-    <origin xyz="0. -0.005 0.0 " rpy="3.1415927 -1.5707963 0. "/>
+    <origin xyz="0. -0.005 0.5 " rpy="3.1415927 -1.5707963 0. "/>
     <parent link="softleg_1_cart_link"/>
     <child link="softleg_1_base_link"/>
     <axis xyz="1 0 0"/>
@@ -96,7 +96,7 @@
   <!-- 1) Base Link -->
   <link name="softleg_1_base_link">
     <inertial>
-      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <origin xyz="0. 0. 0.0" rpy="0. 0. 0."/>
       <mass value="0.9724552"/>
       <inertia ixx="0.0016984399" ixy="-0.00098390475" ixz="-0.0013053791" iyy="0.020148637999999996" iyz="0.00015383174" izz="0.019764512999999997"/>
       <!-- <inertia ixx="0." ixy="0." ixz="0." iyy="0." iyz="0." izz="0."/> -->

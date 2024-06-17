@@ -40,14 +40,14 @@
     <visual>
       <origin rpy="0 0 3.141592653589793" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://softelg_description/meshes/cart.dae" scale=" .001 .001 .001"/>
+        <mesh filename="package://softleg_description/meshes/cart.dae" scale=" .001 .001 .001"/>
       </geometry>
       <material name="SoftLeg/Grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 3.141592653589793" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://softelg_description/meshes/cart.dae" scale=" .001 .001 .001"/>
+        <mesh filename="package://softleg_description/meshes/cart.dae" scale=" .001 .001 .001"/>
       </geometry>
     </collision>
   </link>
@@ -69,7 +69,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://softelg_description/meshes/base.dae" scale=" .001 .001 .001"/>
+        <mesh filename="package://softleg_description/meshes/base.dae" scale=" .001 .001 .001"/>
       </geometry>
       <material name="SoftLeg/Grey"/>
     </visual>
@@ -80,7 +80,7 @@
       </geometry>
       <!-- <origin xyz="0. 0. 0." rpy="0. 0. -1.5707964"/>
       <geometry>
-        <mesh filename="package://softelg_description/meshes/softleg_1_base_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://softleg_description/meshes/softleg_1_base_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
       </geometry> -->
     </collision>
   </link>
@@ -102,7 +102,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0.073 0 0"/>
       <geometry>
-        <mesh filename="package://softelg_description/meshes/thigh.dae" scale=" .001 .001 .001"/>
+        <mesh filename="package://softleg_description/meshes/thigh.dae" scale=" .001 .001 .001"/>
       </geometry>
       <material name="SoftLeg/Grey"/>
     </visual>
@@ -113,7 +113,7 @@
       </geometry>
       <!-- <origin xyz="0. -0.073 0. " rpy="0. 0. -1.5707964"/>
       <geometry>
-        <mesh filename="package://softelg_description/meshes/softleg_1_thigh_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://softleg_description/meshes/softleg_1_thigh_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
       </geometry> -->
     </collision>
   </link>
@@ -135,7 +135,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://softelg_description/meshes/calf.dae" scale=" .001 .001 .001"/>
+        <mesh filename="package://softleg_description/meshes/calf.dae" scale=" .001 .001 .001"/>
       </geometry>
       <material name="SoftLeg/Grey"/>
     </visual>
@@ -151,7 +151,7 @@
       </geometry> -->
       <!-- <origin xyz="-0. 0. -0." rpy="0. -1.5707963 0. "/>
       <geometry>
-        <mesh filename="package://softelg_description/meshes/softleg_1_calf_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://softleg_description/meshes/softleg_1_calf_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
       </geometry> -->
     </collision>
   </link>

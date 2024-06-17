@@ -13,16 +13,14 @@ from ament_index_python.packages        import get_package_share_path
 
 def generate_launch_description():
     
-    URDF_FILE = 'softleg.urdf'
+    URDF_FILE = 'softlegisaac.urdf'
 
     # path for build softleg urdf
-    softleg_robot_path = get_package_share_path("softleg_description")
-    softleg_robot_path = os.path.join(softleg_robot_path, "urdf", URDF_FILE)
-    # softleg_robot_path = os.path.join(softleg_robot_path, "urdf", "softleg.xacro")
+    softleg_robot_path = os.path.join(get_package_share_path("softleg_description"), "urdf", URDF_FILE)
+    # softleg_robot_path = os.path.join(get_package_share_path("softleg_description"), "urdf", "softleg.xacro")
     
     # path for rviz settings
-    rviz_config_path = get_package_share_path("softleg_description")
-    rviz_config_path = os.path.join(rviz_config_path, "rviz", "config.rviz")
+    rviz_config_path = os.path.join(get_package_share_path("softleg_description"), "rviz", "config.rviz")
 
     #declaration argument of launch
     use_gui = DeclareLaunchArgument(
@@ -74,14 +72,12 @@ def generate_launch_description():
         arguments  = ['-d', rviz_config_path],
     )
 
-    return LaunchDescription(
-        [
-            softleg_model,
-            rviz_arg,
-            use_gui,
-            rviz_node,
-            robot_joint_pub,
-            robot_joint_pub_gui,
-            robot_state_pub
-        ]
-    )
+    return LaunchDescription([
+        softleg_model,
+        rviz_arg,
+        use_gui,
+        rviz_node,
+        robot_joint_pub,
+        robot_joint_pub_gui,
+        robot_state_pub
+    ])

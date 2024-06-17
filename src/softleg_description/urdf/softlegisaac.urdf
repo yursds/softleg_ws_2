@@ -57,11 +57,11 @@
   </joint>
   
   <!-- 4) Contact Joint - Fixed -->
-  <!-- <joint name="contact_joint" type="fixed">
+  <joint name="contact_joint" type="fixed">
     <origin rpy="0. 0. 0." xyz="0.02 0 0.185"/>
-    <parent link="calf_link"/>
+    <parent link="softleg_1_calf_link"/>
     <child link="contact_link"/>
-  </joint> -->
+  </joint>
 
   
   <!-- -1) World Link -->
@@ -186,13 +186,13 @@
   </link>
   
   <!-- 4) Contact Link -->
-  <!-- <link name="contact_link">
+  <link name="contact_link">
     <inertial>
       <origin xyz="0 0 0"/>
       <mass value="1e-05"/>
       <inertia ixx="1.0000000000000001e-11" ixy="0.0" ixz="0.0" iyy="1.0000000000000001e-11" iyz="0.0" izz="1.0000000000000001e-11"/>
     </inertial>
-  </link> -->
+  </link>
   
   <!-- <gazebo> -->
   <!-- <gazebo reference="world">

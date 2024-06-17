@@ -1,11 +1,34 @@
 <?xml version="1.0"?>
+
 <robot name="softlegisaac">
-<link name="world"/>
-<joint name="fixed" type="fixed">
-  <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
-  <parent link="world"/>
-  <child link="softleg_1_cart_link"/>
-</joint>
+
+  <material name="SoftLeg/Base">
+    <color rgba="0.2 0.2 0.2 0.7"/>
+  </material>
+  <material name="SoftLeg/Thigh">
+    <color rgba="0.3 0.3 0.3 0.7"/>
+  </material>    
+  <material name="SoftLeg/Calf">
+    <color rgba="0.2 0.2 0.2 0.7"/>
+  </material>
+  <material name="SoftLeg/Cart">
+    <color rgba="0.5 0.5 0.5 0.7"/>
+  </material>
+  <material name="SoftLeg/Red">
+    <color rgba="1.0 0.0 0.0 0.6"/>
+  </material>
+  
+  <!-- -1) World Link -->
+  <link name="world"/>
+  
+  <!-- 0) World Joint -->
+  <joint name="rootJoint" type="fixed">
+    <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+    <parent link="world"/>
+    <child link="softleg_1_cart_link"/>
+  </joint>
+  
+  <!-- 1) Base Joint - Fixed (moves along cart) -->
   <joint name="softleg_1_cart_joint" type="prismatic">
     <!-- <origin xyz="0. -0.01 0.0 " rpy="3.1415927 -1.5707963 0. "/> -->
     <origin xyz="0. -0.005 0.0 " rpy="3.1415927 -1.5707963 0. "/>
@@ -15,6 +38,8 @@
     <joint_properties damping=".0" friction="0.4"/>
     <limit lower="0.0" upper="10.0" effort="500." velocity="1000."/>
   </joint>
+
+  <!-- 2) Hip Joint -->
   <joint name="softleg_1_hip_joint" type="revolute">
     <origin xyz="0. -0.255 0.07 " rpy="0. -1.5707963 0. "/>
     <parent link="softleg_1_base_link"/>
@@ -23,6 +48,8 @@
     <!-- <limit lower="-3.1415927" upper="3.1415927" effort="50." velocity="57.6059555"/> -->
     <limit lower="-3.1415927" upper="3.1415927" effort="100." velocity="57.6059555"/>
   </joint>
+  
+  <!-- 3) Knee Joint -->
   <joint name="softleg_1_knee_joint" type="revolute">
     <origin xyz="0.0275 -0.175 0. " rpy="1.5707964 0. 0. "/>
     <parent link="softleg_1_thigh_link"/>
@@ -31,6 +58,41 @@
     <!-- <limit lower="-3.1415927" upper="3.1415927" effort="50." velocity="57.6059555"/> -->
     <limit lower="-3.1415927" upper="3.1415927" effort="100." velocity="57.6059555"/>
   </joint>
+  
+  <!-- 4) Contact Joint - Fixed -->
+  <!-- <joint name="contact_joint" type="fixed">
+    <origin rpy="0. 0. 0." xyz="0.02 0 0.185"/>
+    <parent link="calf_link"/>
+    <child link="contact_link"/>
+  </joint> -->
+
+
+  <!-- 0) Cart Link -->
+  <link name="softleg_1_cart_link">
+    <inertial>
+      <origin xyz="0. 0.0 0." rpy="0. 0. 0."/>
+      <!-- <mass value="1e10"/> -->
+      <!-- <inertia ixx="1e11" ixy="1e10" ixz="1e10" iyy="1e11" iyz="1e10" izz="1e11"/> -->
+      <mass value="1e-4"/>
+      <inertia ixx="1e-5" ixy="1e-5" ixz="1e-5" iyy="1e-5" iyz="1e-5" izz="1e-5"/>
+    </inertial>
+    <visual>
+      <origin xyz="0. 0. 0." rpy="0. 0. -3.1415925"/>
+      <geometry>
+        <mesh filename="package://softleg_description/meshes/cart.stl" scale="0.001 0.001 0.001"/>
+        <!-- <mesh filename="package://softleg_description/meshes/softleg_1_cart_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
+      </geometry>
+    </visual>
+    <!-- <collision>
+      <origin xyz="0. 0. 0." rpy="0. 0. -3.1415925"/>
+      <geometry>
+      <mesh filename="package://softleg_description/meshes/cart.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://softleg_description/meshes/softleg_1_cart_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision> -->
+  </link>
+  
+  <!-- 1) Base Link -->
   <link name="softleg_1_base_link">
     <inertial>
       <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
@@ -56,62 +118,8 @@
       </geometry> -->
     </collision>
   </link>
-  <link name="softleg_1_calf_link">
-    <inertial>
-      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
-      <mass value="0.0762175"/>
-      <inertia ixx="6.0006428999999995e-05" ixy="-0.011984835" ixz="3.6890095e-10" iyy="0.00047243319" iyz="1.2686112999999998e-10" izz="0.0005204986699999999"/>
-      <!-- <inertia ixx="0." ixy="0." ixz="0." iyy="0." iyz="0." izz="0."/> -->
-    </inertial>
-    <visual>
-      <origin xyz="-0. 0. -0." rpy="0. -1.5707963 0. "/>
-      <geometry>
-        <mesh filename="package://softleg_description/meshes/calf.stl" scale="0.001 0.001 0.001"/>
-        <!-- <mesh filename="package://softleg_description/meshes/softleg_1_calf_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
-      </geometry>
-    </visual>
-     <collision>
-    <origin xyz="0.018 0. 0.175" rpy="0. -1.5707963 0. "/>
-      <geometry>
-        <sphere radius="0.015"/>
-      </geometry>
-    <!-- <collision>
-    <origin xyz="0.018 0. 0.175" rpy="0. -1.5707963 0. "/>
-      <geometry>
-        <cylinder radius="0.015" length="0.01"/>
-      </geometry> -->
-      <!-- <origin xyz="-0. 0. -0." rpy="0. -1.5707963 0. "/>
-      <geometry>
-        <mesh filename="package://softleg_description/meshes/softleg_1_calf_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
-      </geometry> -->
-    </collision>
-    <!-- <lateral_friction value="1"/>
-    <stiffness value="30000"/>
-    <damping value="1000"/> -->
-  </link>
-  <link name="softleg_1_cart_link">
-    <inertial>
-      <origin xyz="0. 0.0 0." rpy="0. 0. 0."/>
-      <!-- <mass value="1e10"/> -->
-      <!-- <inertia ixx="1e11" ixy="1e10" ixz="1e10" iyy="1e11" iyz="1e10" izz="1e11"/> -->
-      <mass value="1e-4"/>
-      <inertia ixx="1e-5" ixy="1e-5" ixz="1e-5" iyy="1e-5" iyz="1e-5" izz="1e-5"/>
-    </inertial>
-    <visual>
-      <origin xyz="0. 0. 0." rpy="0. 0. -3.1415925"/>
-      <geometry>
-        <mesh filename="package://softleg_description/meshes/cart.stl" scale="0.001 0.001 0.001"/>
-        <!-- <mesh filename="package://softleg_description/meshes/softleg_1_cart_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
-      </geometry>
-    </visual>
-    <!-- <collision>
-      <origin xyz="0. 0. 0." rpy="0. 0. -3.1415925"/>
-      <geometry>
-       <mesh filename="package://softleg_description/meshes/cart.stl" scale="0.001 0.001 0.001"/>
-        <mesh filename="package://softleg_description/meshes/softleg_1_cart_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
-      </geometry>
-    </collision> -->
-  </link>
+  
+  <!-- 2) Thigh Link -->
   <link name="softleg_1_thigh_link">
     <inertial>
       <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
@@ -138,6 +146,50 @@
     </collision>
   </link>
 
+  <!-- 3) Calf Link -->
+  <link name="softleg_1_calf_link">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <mass value="0.0762175"/>
+      <inertia ixx="6.0006428999999995e-05" ixy="-0.011984835" ixz="3.6890095e-10" iyy="0.00047243319" iyz="1.2686112999999998e-10" izz="0.0005204986699999999"/>
+      <!-- <inertia ixx="0." ixy="0." ixz="0." iyy="0." iyz="0." izz="0."/> -->
+    </inertial>
+    <visual>
+      <origin xyz="-0. 0. -0." rpy="0. -1.5707963 0. "/>
+      <geometry>
+        <mesh filename="package://softleg_description/meshes/calf.stl" scale="0.001 0.001 0.001"/>
+        <!-- <mesh filename="package://softleg_description/meshes/softleg_1_calf_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/> -->
+      </geometry>
+    </visual>
+    <collision>
+    <origin xyz="0.018 0. 0.175" rpy="0. -1.5707963 0. "/>
+      <geometry>
+        <sphere radius="0.015"/>
+      </geometry>
+    <!-- <collision>
+    <origin xyz="0.018 0. 0.175" rpy="0. -1.5707963 0. "/>
+      <geometry>
+        <cylinder radius="0.015" length="0.01"/>
+      </geometry> -->
+      <!-- <origin xyz="-0. 0. -0." rpy="0. -1.5707963 0. "/>
+      <geometry>
+        <mesh filename="package://softleg_description/meshes/softleg_1_calf_link_visuals_mesh_0.obj" scale="0.001 0.001 0.001"/>
+      </geometry> -->
+    </collision>
+    <!-- <lateral_friction value="1"/>
+    <stiffness value="30000"/>
+    <damping value="1000"/> -->
+  </link>
+  
+  <!-- 4) Contact Link -->
+  <!-- <link name="contact_link">
+    <inertial>
+      <origin xyz="0 0 0"/>
+      <mass value="1e-05"/>
+      <inertia ixx="1.0000000000000001e-11" ixy="0.0" ixz="0.0" iyy="1.0000000000000001e-11" iyz="0.0" izz="1.0000000000000001e-11"/>
+    </inertial>
+  </link> -->
+  
   <!-- <gazebo> -->
   <!-- <gazebo reference="world">
       <material>Gazebo/White</material>
@@ -147,124 +199,132 @@
         <parameters>/home/yurs/softleg_ws_2/src/softleg_gazebo/config/softleg_gazebo_sim_jnt_PD.yaml</parameters>
     </plugin>
   </gazebo>
+  
   <ros2_control name="GazeboSystem" type="system">
-        <hardware>
-            <plugin>gazebo_ros2_control/GazeboSystem</plugin>
-        </hardware>
-      <joint name="softleg_1_cart_joint">
-                <!-- <command_interface name="effort" /> -->
-                <state_interface name="position">
-                    <param name="initial_value">-0.0</param>
-                </state_interface>
-                <state_interface name="velocity">
-                    <param name="initial_value">0.0</param>
-                </state_interface>
-                <state_interface name="effort" />
-      </joint>     
-      <joint name="softleg_1_hip_joint">
-              <command_interface name="effort" />
-              <state_interface name="position">
-                  <param name="initial_value">-0.0</param>
-              </state_interface>
-              <state_interface name="velocity">
-                  <param name="initial_value">0.0</param>
-              </state_interface>
-              <state_interface name="effort" />
-      </joint>
-      <joint name="softleg_1_knee_joint">
-                <command_interface name="effort" />
-                <state_interface name="position">
-                    <param name="initial_value">-0.0</param>
-                </state_interface>
-                <state_interface name="velocity">
-                    <param name="initial_value">0.0</param>
-                </state_interface>
-                <state_interface name="effort" />
-            </joint>
-        </ros2_control>
+    <hardware>
+        <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+  
+    <joint name="softleg_1_cart_joint">
+      <!-- <command_interface name="effort" /> -->
+      <state_interface name="position">
+        <param name="initial_value">-0.0</param>
+      </state_interface>
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="effort" />
+    </joint>     
+  
+    <joint name="softleg_1_hip_joint">
+      <command_interface name="effort" />
+      <state_interface name="position">
+        <param name="initial_value">-0.0</param>
+      </state_interface>
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="effort" />
+    </joint>
+  
+    <joint name="softleg_1_knee_joint">
+      <command_interface name="effort" />
+      <state_interface name="position">
+        <param name="initial_value">-0.0</param>
+      </state_interface>
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="effort" />
+    </joint>
+  </ros2_control>
 
-        <gazebo reference="softleg_1_cart_link">
-            <gravity>true</gravity>
-            <material>Gazebo/White</material>
-            <kp>100000.0</kp>
-            <kd>1000.0</kd>
-            <mu1>0.0</mu1>
-            <mu2>0.0</mu2>
-            <slip1>0.1</slip1>
-            <slip2>0.1</slip2>
-            <collision>
-              <surface>
-                <contact>
-                  <ode>
-                  <min_depth>0.0</min_depth>
-                  </ode>
-                </contact>
-              </surface>
-            </collision>
-          </gazebo>
-          <gazebo reference="softleg_1_base_link">
-          <gravity>true</gravity>
-          <material>Gazebo/White</material>
-          <!-- <kp>1e15</kp>
-          <kd>1e15</kd>
-          <mu>5.0</mu>
-          <mu2>0.0</mu2>
-          <slip1>0.0</slip1>
-          <slip2>0.0</slip2>
-          <collision>
-            <surface>
-              <contact>
-                <ode>
-                  <min_depth>0.0</min_depth>
-                </ode>
-              </contact>
-            </surface>
-          </collision> -->
-        </gazebo>
-        <gazebo reference="softleg_1_thigh_link">
-          <gravity>true</gravity>
-          <material>Gazebo/White</material>
-          <!-- <kp>1e6</kp>
-          <kd>1e2</kd>
-          <mu1>1</mu1>
-          <mu2>1</mu2>
-          <slip1>0</slip1>
-          <slip2>0</slip2>
-          <collision>
-            <surface>
-              <contact>
-                <ode>
-                  <min_depth>0.01</min_depth>
-                </ode>
-              </contact>
-            </surface>
-          </collision> -->
-        </gazebo>
-        <gazebo reference="softleg_1_calf_link">
-          <gravity>true</gravity>
-          <material>Gazebo/White</material>
-          <collision>
-          <surface>
-            <friction>
-              <ode>
-                <!-- <mu>5.0</mu> -->
-                <!-- <mu1>1.5</mu1> 
-                <mu2>1.5</mu2>  -->
-                <!-- <fdir1>0 0 1</fdir1> -->
-                <!-- <slip1>0.0</slip1> -->
-                <!-- <slip2>0.0</slip2> -->
-              </ode>
-            </friction>
-            <contact>
-              <ode>
-                <!-- <kp>1000000.0</kp>
-                <kd>1000.0</kd> -->
-                <!-- <maxVel>1000.0</maxVel> -->
-                <!-- <maxContacts>1</maxContacts>
-                <min_depth>0.00</min_depth> -->
-              </ode>
-            </contact>
-          </surface>
-        </collision>
-        </gazebo> 
+  <gazebo reference="softleg_1_cart_link">
+    <gravity>true</gravity>
+    <material>Gazebo/White</material>
+    <kp>100000.0</kp>
+    <kd>1000.0</kd>
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+    <slip1>0.1</slip1>
+    <slip2>0.1</slip2>
+    <collision>
+      <surface>
+        <contact>
+          <ode>
+          <min_depth>0.0</min_depth>
+          </ode>
+        </contact>
+      </surface>
+    </collision>
+  </gazebo>
+  
+  <gazebo reference="softleg_1_base_link">
+    <gravity>true</gravity>
+    <material>Gazebo/White</material>
+    <!-- <kp>1e15</kp>
+    <kd>1e15</kd>
+    <mu>5.0</mu>
+    <mu2>0.0</mu2>
+    <slip1>0.0</slip1>
+    <slip2>0.0</slip2>
+    <collision>
+      <surface>
+        <contact>
+          <ode>
+            <min_depth>0.0</min_depth>
+          </ode>
+        </contact>
+      </surface>
+    </collision> -->
+  </gazebo>
+  
+  <gazebo reference="softleg_1_thigh_link">
+    <gravity>true</gravity>
+    <material>Gazebo/White</material>
+    <!-- <kp>1e6</kp>
+    <kd>1e2</kd>
+    <mu1>1</mu1>
+    <mu2>1</mu2>
+    <slip1>0</slip1>
+    <slip2>0</slip2>
+    <collision>
+      <surface>
+        <contact>
+          <ode>
+            <min_depth>0.01</min_depth>
+          </ode>
+        </contact>
+      </surface>
+    </collision> -->
+  </gazebo>
+  
+  <gazebo reference="softleg_1_calf_link">
+    <gravity>true</gravity>
+    <material>Gazebo/White</material>
+    <collision>
+    <surface>
+      <friction>
+        <ode>
+          <!-- <mu>5.0</mu> -->
+          <!-- <mu1>1.5</mu1> 
+          <mu2>1.5</mu2>  -->
+          <!-- <fdir1>0 0 1</fdir1> -->
+          <!-- <slip1>0.0</slip1> -->
+          <!-- <slip2>0.0</slip2> -->
+        </ode>
+      </friction>
+      <contact>
+        <ode>
+          <!-- <kp>1000000.0</kp>
+          <kd>1000.0</kd> -->
+          <!-- <maxVel>1000.0</maxVel> -->
+          <!-- <maxContacts>1</maxContacts>
+          <min_depth>0.00</min_depth> -->
+        </ode>
+      </contact>
+    </surface>
+    </collision>
+  </gazebo> 
+
 </robot>

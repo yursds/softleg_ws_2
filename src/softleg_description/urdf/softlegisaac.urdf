@@ -26,9 +26,9 @@
   </joint>
   
   <!-- 1) Base Joint - Fixed (moves along cart) -->
-  <joint name="softleg_1_cart_joint" type="fixed">
+  <joint name="softleg_1_cart_joint" type="prismatic">
     <!-- <origin xyz="0. -0.01 0.0 " rpy="3.1415927 -1.5707963 0. "/> -->
-    <origin xyz="0. -0.005 0.5 " rpy="3.1415927 -1.5707963 0. "/>
+    <origin xyz="0. -0.005 0.0 " rpy="3.1415927 -1.5707963 0. "/>
     <parent link="softleg_1_cart_link"/>
     <child link="softleg_1_base_link"/>
     <axis xyz="1 0 0"/>

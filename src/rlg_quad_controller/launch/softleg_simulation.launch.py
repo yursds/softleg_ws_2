@@ -44,9 +44,11 @@ def generate_launch_description():
         package = 'rlg_quad_controller',
         name = 'inference_controller',
         executable = 'inference_controller',
-        parameters = [params,
-                      {'config_path': config_path},
-                      {'model_path': weights_path}]
+        parameters = [
+            params,
+            {'config_path': config_path},
+            {'model_path': weights_path}],
+        output="screen"
     )
 
     ld.add_action(node)

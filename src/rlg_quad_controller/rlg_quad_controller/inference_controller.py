@@ -19,35 +19,42 @@ This is the infernce of the experiments
 """
 
 class InferenceController(Node):
+    
     def __init__(self):
+        
         super().__init__('inference_controller')
         self.time_init = time.time()
+        
+        # ---------------------------------------- declare and set as attribute -------------------------------- #
+        
         # Simulation flag
         self.declare_parameter('simulation', False)
         self.simulation = self.get_parameter('simulation').get_parameter_value().bool_value
-
+        
         # Model path as pth file
         self.declare_parameter('model_path', '')
         self.declare_parameter('config_path', '')
-        self.model_path     = self.get_parameter('model_path').get_parameter_value().string_value
-        self.config_path    = self.get_parameter('config_path').get_parameter_value().string_value
+        self.model_path  = self.get_parameter('model_path').get_parameter_value().string_value
+        self.config_path = self.get_parameter('config_path').get_parameter_value().string_value
 
         # Topic names
         self.declare_parameter('joint_state_topic', '/state_broadcaster/joint_states')
         self.declare_parameter('joint_target_pos_topic', '/joint_controller/command')
         # self.declare_parameter('cmd_height_topic', '/cmd_height')
-        self.joint_state_topic          = self.get_parameter('joint_state_topic').get_parameter_value().string_value
-        self.joint_target_pos_topic     = self.get_parameter('joint_target_pos_topic').get_parameter_value().string_value
+        self.joint_state_topic      = self.get_parameter('joint_state_topic').get_parameter_value().string_value
+        self.joint_target_pos_topic = self.get_parameter('joint_target_pos_topic').get_parameter_value().string_value
         # self.cmd_height_topic           = self.get_parameter('cmd_height_topic').get_parameter_value().string_value
 
         # Inference rate
+        self.rate = 1.0 / 0.025
+        
+        # get parameter from config.yaml
         with open(self.config_path, 'r') as f:
             params = yaml.safe_load(f)
-                
-        self.rate = 1.0 / 0.025  
+        
         # 1.0 / (params['task']['sim']['dt'] * params['task']['env']['control']['decimation']) 
         self.rate_elegent = 1.0 / ( params['task']['sim']['dt'] * \
-            ( params['task']['env']['control']['decimation'] + params['task']['env']['controlFrequencyInv']))
+            (params['task']['env']['control']['decimation'] + params['task']['env']['controlFrequencyInv']))
         rclpy.logging.get_logger('rclpy.node').info('Inference rate: {}'.format(self.rate))
         
         self.action_scale       = params['task']['env']['control']['actionScale']    # 0.5  
@@ -77,27 +84,22 @@ class InferenceController(Node):
         )
 
         # this is what I am publishing 
-        self.joint_kp = np.array([
-            1.0,
-            1.0])
-        
-        self.joint_kd = np.array([
-            1.0,
-            1.0])
+        self.joint_kp = np.array([1.0, 1.0])
+        self.joint_kd = np.array([1.0, 1.0])
 
         if self.simulation:
             self.joint_target_pos_pub = self.create_publisher(JointState, self.joint_target_pos_topic, 10)
-            self.joint_sub  = self.create_subscription(JointState, self.joint_state_topic, self.joint_state_callback, 10)
+            self.joint_sub            = self.create_subscription(JointState, self.joint_state_topic, self.joint_state_callback, 10)
         else:
             self.joint_target_pos_pub = self.create_publisher(JointsCommand, self.joint_target_pos_topic, 10)
-            self.joint_sub  = self.create_subscription(JointsStates, self.joint_state_topic, self.joint_state_callback, 10)
-
+            self.joint_sub            = self.create_subscription(JointsStates, self.joint_state_topic, self.joint_state_callback, 10)
+        
         # self.cmd_sub = self.create_subscription(Point, self.cmd_height_topic, self.cmd_height_callback, 10)
         
         # Initialize buffers as dicts, so it's independent of the order of the joints
         self.joint_pos = {self.joint_names[i]:0.0 for i in range(self.njoint)}
         self.joint_vel = {self.joint_names[i]:0.0 for i in range(self.njoint)}
-   
+        
         # Load PyTorch model and create timer
         rclpy.logging.get_logger('rclpy.node').info('Loading model from {}'.format(self.model_path))
         self.model = build_rlg_model(self.model_path, params)
@@ -106,7 +108,7 @@ class InferenceController(Node):
         rclpy.logging.get_logger('rclpy.node').info('Model loaded. Node ready for inference.')
         self.startup_time = rclpy.clock.Clock().now()
         self.startup_time_obs = self.startup_time
-
+    
     @staticmethod
     def compute_q2(q1, offset=np.pi/20):
         lower_bound = -(np.pi + q1 - offset)
@@ -194,10 +196,12 @@ class InferenceController(Node):
         self.joint_target_pos_pub.publish(joint_msg)
 
 def main(args=None):
+    
     rclpy.init(args=args)
     inference_controller = InferenceController()
     rclpy.spin(inference_controller)
     inference_controller.destroy_node()
+    
     rclpy.shutdown()
 
 if __name__ == '__main__':

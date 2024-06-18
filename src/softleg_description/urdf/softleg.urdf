@@ -177,7 +177,7 @@
  
   <gazebo>
     <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
-      <parameters>/home/yurs/softleg_ws_2/src/softleg_gazebo/config/softleg_gazebo_sim_jnt_PD.yaml</parameters>
+      <parameters>package://softleg_gazebo/config/softleg_gazebo_sim_jnt_PD.yaml</parameters>
     </plugin>
   </gazebo>
   <ros2_control name="GazeboSystem" type="system">

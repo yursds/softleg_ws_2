@@ -49,10 +49,10 @@ def generate_launch_description():
         # TODO: stops bag recording and policy node when jumping_node is done
 
         return LaunchDescription([
-                ExecuteProcess(
-                cmd=['ros2', 'bag', 'record', '-a', '-o', 'bag_to_delete', '-s', 'mcap'],
-                output='screen'
-                ),
+                # ExecuteProcess(
+                # cmd=['ros2', 'bag', 'record', '-a', '-o', 'bag_to_delete', '-s', 'mcap'],
+                # output='screen'
+                # ),
                 jumping_node,
                 policy,
                 

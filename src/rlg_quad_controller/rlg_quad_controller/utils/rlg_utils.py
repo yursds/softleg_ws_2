@@ -9,9 +9,10 @@ from rl_games.algos_torch.models import ModelA2CContinuousLogStd
 
 def build_rlg_model(weights_path, params):
 
+    
+    print("QUIIIIIIIIIIIIIIIIIIIIII\n\n\n\n")
     weights = torch.load(weights_path, map_location=torch.device('cuda:0'))
-
-
+    
     net_params = params['train']['params']['network']
 
     network = A2CBuilder()
@@ -28,6 +29,7 @@ def build_rlg_model(weights_path, params):
             'normalize_input': params['train']['params']['config']['normalize_input']
         }
     model = model_a2c.build(build_config)
+    
     model.to('cuda:0')
 
     model.load_state_dict(weights['model'])

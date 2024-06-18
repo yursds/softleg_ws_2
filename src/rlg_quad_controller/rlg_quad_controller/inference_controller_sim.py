@@ -20,6 +20,9 @@ class InferenceController(Node):
     def __init__(self):
         super().__init__('inference_controller')
         self.time_init = time.time()
+        
+        # ---------------------------------------- declare and set as attribute -------------------------------- #
+        
         # Simulation flag
         self.declare_parameter('simulation', False)
         self.simulation = self.get_parameter('simulation').get_parameter_value().bool_value
@@ -37,12 +40,14 @@ class InferenceController(Node):
         self.joint_state_topic          = self.get_parameter('joint_state_topic').get_parameter_value().string_value
         self.joint_target_pos_topic     = self.get_parameter('joint_target_pos_topic').get_parameter_value().string_value
         # self.cmd_height_topic           = self.get_parameter('cmd_height_topic').get_parameter_value().string_value
-
+        
         # Inference rate
+        self.rate = 1.0 / 0.025
+        
+        # get parameter from config.yaml
         with open(self.config_path, 'r') as f:
             params = yaml.safe_load(f)
-                
-        self.rate = 1.0 / 0.025  
+        
         # 1.0 / (params['task']['sim']['dt'] * params['task']['env']['control']['decimation']) 
         self.rate_elegent = 1.0 / ( params['task']['sim']['dt'] * \
             ( params['task']['env']['control']['decimation'] + params['task']['env']['controlFrequencyInv']))

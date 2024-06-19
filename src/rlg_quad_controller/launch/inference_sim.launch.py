@@ -15,7 +15,7 @@ from ament_index_python.packages    import get_package_share_directory
 
 def generate_launch_description():
     
-    ctrl_param_folder = 'config'
+    ctrl_param_folder = 'config' # contain simulation flag
     model_rl_folder   = 'models'
     inference_config  = 'inference_ctrl_config_sim.yaml'
     RL_param_file     = 'config_minimal.yaml'

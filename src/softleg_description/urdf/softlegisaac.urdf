@@ -200,7 +200,7 @@
   </gazebo> -->
   <gazebo>
     <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
-      <parameters>/home/yurs/softleg_ws_2/src/softleg_gazebo/config/softleg_gazebo_sim_jnt_PD.yaml</parameters>
+      <parameters>/home/yurs/softleg_ws_2/src/softleg_gazebo/config/softleg_gazebo_PD.yaml</parameters>
     </plugin>
   </gazebo>
   

@@ -35,34 +35,33 @@ class InferenceController(Node):
         self.declare_parameter('joint_target_pos_topic', '/joint_controller/command')
         self.declare_parameter('model_path', '')
         self.declare_parameter('config_path', '')
-        # self.declare_parameter('cmd_height_topic', '/cmd_height')
+        
         self.simulation             = self.get_parameter('simulation').get_parameter_value().bool_value
         self.model_path             = self.get_parameter('model_path').get_parameter_value().string_value
         self.config_path            = self.get_parameter('config_path').get_parameter_value().string_value
         self.joint_state_topic      = self.get_parameter('joint_state_topic').get_parameter_value().string_value
         self.joint_target_pos_topic = self.get_parameter('joint_target_pos_topic').get_parameter_value().string_value
-        # self.cmd_height_topic           = self.get_parameter('cmd_height_topic').get_parameter_value().string_value
         
         # get parameter from yaml in 'config_path'
         with open(self.config_path, 'r') as f:
-            params = yaml.safe_load(f)
+            params_rl = yaml.safe_load(f)
         
         # Inference rate
         self.rate = 1.0 / 0.025
-        # 1.0 / (params['task']['sim']['dt'] * params['task']['env']['control']['decimation']) 
-        self.rate_elegent = 1.0 / ( params['task']['sim']['dt'] * \
-            ( params['task']['env']['control']['decimation'] + params['task']['env']['controlFrequencyInv']))
+        # 1.0 / (params_rl['task']['sim']['dt'] * params_rl['task']['env']['control']['decimation']) 
+        self.rate_elegent = 1.0 / (params_rl['task']['sim']['dt'] * \
+            ( params_rl['task']['env']['control']['decimation'] + params_rl['task']['env']['controlFrequencyInv']))
         
-        self.action_scale       = params['task']['env']['control']['actionScale']    # 0.5  
-        self.dofPositionScale   = params['task']['env']['learn']['qScale']           # 1.0
-        self.dofVelocityScale   = params['task']['env']['learn']['qDotScale']        # 0.05
+        self.action_scale       = params_rl['task']['env']['control']['actionScale']    # 0.5  
+        self.dofPositionScale   = params_rl['task']['env']['learn']['qScale']           # 1.0
+        self.dofVelocityScale   = params_rl['task']['env']['learn']['qDotScale']        # 0.05
         
-        self.clip_obs           = params['task']['env']['clipObservations']
-        self.num_act            = params['task']['env']['numActions']
-        self.num_obs            = params['task']['env']['numObservations']
+        self.clip_obs           = params_rl['task']['env']['clipObservations']
+        self.num_act            = params_rl['task']['env']['numActions']
+        self.num_obs            = params_rl['task']['env']['numObservations']
         
-        self.timeEpisode        = params['task']['env']['episodeLength']
-        self.cmd_vel_scale      = params['task']['env']['heightDes']
+        self.timeEpisode        = params_rl['task']['env']['episodeLength']
+        self.cmd_vel_scale      = params_rl['task']['env']['heightDes']
         self.clip_act           = 1.0
         
         # I do not need the prismatic pos
@@ -100,7 +99,7 @@ class InferenceController(Node):
         # self.previous_action = np.zeros((self.njoint - 1,1))
 
         # Load PyTorch model and create timer
-        self.model = build_rlg_model(self.model_path, params)
+        self.model = build_rlg_model(self.model_path, params_rl)
         # start inference
         self.timer = self.create_timer(1.0 / self.rate, self.inference_callback)
         

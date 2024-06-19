@@ -15,25 +15,29 @@ from ament_index_python.packages    import get_package_share_directory
 
 def generate_launch_description():
     
+    inference_ctrl_config = 'inference_ctrl_config_sim.yaml'
+    RL_param_file         = 'config_minimal.yaml'
+    RL_model_file         = 'SoftlegJump040_target13.pth'
+    
     # definition of controller parameters
     ctrl_params = os.path.join(
         get_package_share_directory('rlg_quad_controller'),
         'config',
-        'inference_ctrl_config.yaml'
+        inference_ctrl_config
         )
     
     # definition of modelRL_path
     configRL_path = os.path.join(
         get_package_share_directory('rlg_quad_controller'),
         'models',
-        'config.yaml'
+        RL_param_file
         )
     
     # definition of configRL_path
     weightsRL_path = os.path.join(
         get_package_share_directory('rlg_quad_controller'),
         'models',
-        'SoftlegJump040_target13.pth'
+        RL_model_file
         )
     
     # node inference_controller

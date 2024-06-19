@@ -40,7 +40,7 @@ def generate_launch_description():
 
     policy = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            [PathJoinSubstitution([FindPackageShare("rlg_quad_controller"), "launch", "softleg_simulation.launch.py"])]
+            [PathJoinSubstitution([FindPackageShare("rlg_quad_controller"), "launch", "inference_sim.launch.py"])]
         ),
     )
 
@@ -52,7 +52,7 @@ def generate_launch_description():
         # output='screen'
         # ),
         jumping_node,
-        policy,    
+        policy,
     ])
     
     return ld

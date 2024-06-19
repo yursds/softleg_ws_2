@@ -1,16 +1,16 @@
+#
+
 import rclpy
 import torch
 import numpy as np
 import yaml
-from rclpy      import logging
-from rclpy.clock import Clock
+import time
 from rclpy.duration import Duration
 
 from rclpy.node import Node
 from pi3hat_moteus_int_msgs.msg import JointsCommand, JointsStates, PacketPass
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Twist, Point
-import time
 from .utils.rlg_utils import build_rlg_model, run_inference
 
 """
@@ -21,19 +21,20 @@ joint_pos  ---> | inference_controller | ---> joint_target_pos --> PD contr
 """
 
 class InferenceController(Node):
-    """ load model of RL and do inference """
+    """ Load model of RL and do inference. \n
+    parameters to set:  model_path, config_path """
     
     def __init__(self):
         
         super().__init__(node_name='inference_controller')
         self.time_init = time.time()
         
-        # Declare and set as attribute
+        # Declare default values, then get values (from Node(parameters=[])) and set as attributes
         self.declare_parameter('simulation', False)
-        self.declare_parameter('model_path', '')
-        self.declare_parameter('config_path', '')
         self.declare_parameter('joint_state_topic', '/state_broadcaster/joint_states')
         self.declare_parameter('joint_target_pos_topic', '/joint_controller/command')
+        self.declare_parameter('model_path', '')
+        self.declare_parameter('config_path', '')
         # self.declare_parameter('cmd_height_topic', '/cmd_height')
         self.simulation             = self.get_parameter('simulation').get_parameter_value().bool_value
         self.model_path             = self.get_parameter('model_path').get_parameter_value().string_value
@@ -42,7 +43,7 @@ class InferenceController(Node):
         self.joint_target_pos_topic = self.get_parameter('joint_target_pos_topic').get_parameter_value().string_value
         # self.cmd_height_topic           = self.get_parameter('cmd_height_topic').get_parameter_value().string_value
         
-        # get parameter from config.yaml
+        # get parameter from yaml in 'config_path'
         with open(self.config_path, 'r') as f:
             params = yaml.safe_load(f)
         
@@ -65,11 +66,7 @@ class InferenceController(Node):
         self.clip_act           = 1.0
         
         # I do not need the prismatic pos
-        self.default_dof = np.array([
-            -np.pi, 
-            2.75
-            # (np.pi - np.deg2rad(10))
-        ]) 
+        self.default_dof = np.array([-np.pi, 2.75]) 
         
         self.previous_action = (self.default_dof / self.action_scale).tolist()
         # self.previous_action = (np.zeros((self.num_act, 1))).tolist()
@@ -82,16 +79,11 @@ class InferenceController(Node):
             'softleg_1_hip_joint',  
             'softleg_1_knee_joint'
         )
-
-        # this is what I am publishing 
-        self.joint_kp = np.array([
-            1.0,
-            1.0])
         
-        self.joint_kd = np.array([
-            1.0,
-            1.0])
-
+        # this is what I am publishing 
+        self.joint_kp = np.array([1.0, 1.0])
+        self.joint_kd = np.array([1.0, 1.0])
+        
         if self.simulation:
             self.joint_target_pos_pub = self.create_publisher(JointState, self.joint_target_pos_topic, 10)
             self.joint_sub  = self.create_subscription(JointState, self.joint_state_topic, self.joint_state_callback, 10)
@@ -104,7 +96,7 @@ class InferenceController(Node):
         # Initialize buffers as dicts, so it's independent of the order of the joints
         self.joint_pos = {self.joint_names[i]:0.0 for i in range(self.njoint)}
         self.joint_vel = {self.joint_names[i]:0.0 for i in range(self.njoint)}
-   
+    
         # self.previous_action = np.zeros((self.njoint - 1,1))
 
         # Load PyTorch model and create timer
@@ -112,12 +104,13 @@ class InferenceController(Node):
         # start inference
         self.timer = self.create_timer(1.0 / self.rate, self.inference_callback)
         
-        self.startup_time = Clock().now()
+        self.startup_time = self.get_clock().now()
+        
         self.startup_time_obs = self.startup_time
         
-        logging.get_logger('rclpy.node').info('Loading model from {}'.format(self.model_path))
-        logging.get_logger('rclpy.node').info('Model loaded. Node ready for inference.')
-        logging.get_logger('rclpy.node').info('Inference rate: {}'.format(self.rate))
+        self.get_logger().info('Loading model from {}'.format(self.model_path))
+        self.get_logger().info('Model loaded. Node ready for inference.')
+        self.get_logger().info('Inference rate: {}'.format(self.rate))
         
     @staticmethod
     def compute_q2( q1, offset=torch.pi/20 ):
@@ -132,7 +125,7 @@ class InferenceController(Node):
     
     def joint_state_callback(self, msg):
         # Assign to dict using the names in msg.name
-        t = Clock().now()
+        t = self.get_clock().now()
         timestamp = t.nanoseconds / 1e9 # [s]
         for i in range(self.njoint):
             if (not np.isnan(msg.position[i]) and (not np.isnan(msg.velocity[i]))):
@@ -147,7 +140,7 @@ class InferenceController(Node):
         joint_msg = JointsCommand()
         if self.simulation:
             joint_msg = JointState()
-        joint_msg.header.stamp = Clock().now().to_msg()
+        joint_msg.header.stamp = self.get_clock().now().to_msg()
         joint_msg.name = self.joint_names
         joint_msg.position = (self.default_dof).tolist()
         if not self.simulation:
@@ -167,14 +160,14 @@ class InferenceController(Node):
         #     np.fromiter(self.joint_vel.values(),dtype=float).reshape((self.njoint, 1)) / self.dofVelocityScale,
         #     ## from SoftlegJump028_target6.pth
         #     np.reshape(self.previous_action, (self.njoint - 1, 1)),
-        #     np.array([(self.timeEpisode - (rclpy.clock.Clock().now().nanoseconds / 1e9 - self.startup_time_obs.nanoseconds / 1e9)) / self.timeEpisode]).reshape((1,1)) 
+        #     np.array([(self.timeEpisode - (rclpy.clock.self.get_clock().now().nanoseconds / 1e9 - self.startup_time_obs.nanoseconds / 1e9)) / self.timeEpisode]).reshape((1,1)) 
         # )).reshape((1, self.num_obs))   
         
         obs_list = np.concatenate((      
             np.fromiter(list(self.joint_pos.values())[-2:], dtype=float).reshape((self.njoint - 1, 1)) / self.dofPositionScale,
             np.fromiter(list(self.joint_vel.values())[-2:],dtype=float).reshape((self.njoint - 1, 1)) / self.dofVelocityScale,
             np.reshape(self.previous_action, (self.njoint - 1, 1)),
-            np.array([(self.timeEpisode - (Clock().now().nanoseconds / 1e9 - self.startup_time_obs.nanoseconds / 1e9)) / self.timeEpisode]).reshape((1,1)) 
+            np.array([(self.timeEpisode - (self.get_clock().now().nanoseconds / 1e9 - self.startup_time_obs.nanoseconds / 1e9)) / self.timeEpisode]).reshape((1,1)) 
         )).reshape((1, self.num_obs)) 
         
         
@@ -188,20 +181,20 @@ class InferenceController(Node):
         joint_msg = JointsCommand()
         if self.simulation:
             joint_msg = JointState()
-        joint_msg.header.stamp = Clock().now().to_msg()
+        joint_msg.header.stamp = self.get_clock().now().to_msg()
         joint_msg.name = self.joint_names[-2:]
-        
+
         action = np.squeeze(action)
-        if Clock().now() < (self.startup_time + Duration(seconds=5.0)):
-            self.startup_time_obs = Clock().now()
+        if self.get_clock().now() < (self.startup_time + Duration(seconds=5.0)):
+            self.startup_time_obs = self.get_clock().now()
             action *= 0.0
             joint_msg.position = self._avg_default_dof
         else:               
-            if Clock().now() > (self.startup_time_obs + Duration(seconds=2.0)):
-                logging.get_logger('rclpy.node').info('Policy stops ...') 
+            if self.get_clock().now() > (self.startup_time_obs + Duration(seconds=2.0)):
+                self.get_logger().info('Policy stops ...') 
                 joint_msg.position = self._avg_default_dof
             else:
-                logging.get_logger('rclpy.node').info('Policy starts working ...') 
+                self.get_logger().info('Policy starts working ...') 
                 
                 ## SoftlegJump028_target4.pth to SoftlegJump029_target8.pth
                 # joint_msg.position = (np.clip(np.squeeze(action) * self.action_scale \
@@ -212,7 +205,7 @@ class InferenceController(Node):
                 
                 ## step to set gains
                 # joint_msg.position = [-1.0, -1.0] 
-            
+        
         if not self.simulation:
             joint_msg.kp_scale = self.joint_kp.tolist()
             joint_msg.kd_scale = self.joint_kd.tolist()

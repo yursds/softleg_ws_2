@@ -1,3 +1,14 @@
+# -------------------------------------------------------------------------------------------- #
+# LAUNCHED FILES
+#
+# launch:   - pkg(gazebo_ros) gazebo.launch.py
+#
+# node:     - pkg(robot_state_publisher) robot_state_publisher.py
+#           - pkg(gazebo_ros) spawn_entity.py
+#           - pkg(controller_manager) spawner.py -> joint_state_broadcaster
+#           - pkg(controller_manager) spawner.py -> PD_control
+# -------------------------------------------------------------------------------------------- #
+
 import os
 
 from launch_ros.actions                 import Node, SetParameter
@@ -66,7 +77,8 @@ def generate_launch_description():
         arguments  = ["PD_control", "--controller-manager", "/controller_manager"],
     )
     
-    return LaunchDescription([
+    # output
+    ld = LaunchDescription([
         
         SetParameter(name='use_sim_time', value=True),
         gazebo,
@@ -85,3 +97,5 @@ def generate_launch_description():
             )
         ),
     ])
+    
+    return ld

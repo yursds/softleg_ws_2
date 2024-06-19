@@ -1,30 +1,35 @@
-import os
-from ament_index_python.packages import get_package_share_directory
-from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription,RegisterEventHandler
-from launch.substitutions import LaunchConfiguration, Command, FindExecutable, PathJoinSubstitution
+# -------------------------------------------------------------------------------------------- #
+# LAUNCHED FILES
+#
+# node:     - pkg(controller_manager) spawner.py -> joint_state_broadcaster
+#           - pkg(controller_manager) spawner.py -> joint_controller
+# -------------------------------------------------------------------------------------------- #
+
+from launch             import LaunchDescription
 from launch_ros.actions import Node
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.conditions import IfCondition
-from launch_ros.substitutions import FindPackageShare
-from launch.event_handlers import OnProcessExit
+
 
 def generate_launch_description():
+    
+    # the broadcaster reads all state interfaces and pub them on /joint_states and /dynamic_joint_states.
+    # it is not a real controller.
     joint_state_broadcaster_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["state_broadcaster", "--controller-manager", "/controller_manager"],
+        package    = "controller_manager",
+        executable = "spawner",
+        arguments  = ["state_broadcaster", "--controller-manager", "/controller_manager"],
     )
-
+    
+    # PD controller
     PD_jnt_control = Node(
-        package="controller_manager",
-        executable="spawner",
-        #arguments=['GazeboSystem'],
-        arguments=["joint_controller", "--controller-manager", "/controller_manager"],
+        package    = "controller_manager",
+        executable = "spawner",
+        arguments  = ["joint_controller", "--controller-manager", "/controller_manager"],
     )
-
-
-    return LaunchDescription([
-      joint_state_broadcaster_spawner,
-      PD_jnt_control
-      ])
+    
+    # output
+    ld = LaunchDescription([
+        joint_state_broadcaster_spawner,
+        PD_jnt_control
+    ])
+    
+    return ld

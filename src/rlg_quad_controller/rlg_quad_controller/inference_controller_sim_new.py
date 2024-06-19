@@ -2,6 +2,10 @@ import rclpy
 import torch
 import numpy as np
 import yaml
+from rclpy      import logging
+from rclpy.clock import Clock
+from rclpy.duration import Duration
+
 from rclpy.node import Node
 from pi3hat_moteus_int_msgs.msg import JointsCommand, JointsStates, PacketPass
 from sensor_msgs.msg import JointState
@@ -17,50 +21,47 @@ joint_pos  ---> | inference_controller | ---> joint_target_pos --> PD contr
 """
 
 class InferenceController(Node):
+    """ load model of RL and do inference """
+    
     def __init__(self):
-        super().__init__('inference_controller')
+        
+        super().__init__(node_name='inference_controller')
         self.time_init = time.time()
         
-        # ---------------------------------------- declare and set as attribute -------------------------------- #
-        
-        # Simulation flag
+        # Declare and set as attribute
         self.declare_parameter('simulation', False)
-        self.simulation = self.get_parameter('simulation').get_parameter_value().bool_value
-
-        # Model path as pth file
         self.declare_parameter('model_path', '')
         self.declare_parameter('config_path', '')
-        self.model_path  = self.get_parameter('model_path').get_parameter_value().string_value
-        self.config_path = self.get_parameter('config_path').get_parameter_value().string_value
-
-        # Topic names
         self.declare_parameter('joint_state_topic', '/state_broadcaster/joint_states')
         self.declare_parameter('joint_target_pos_topic', '/joint_controller/command')
         # self.declare_parameter('cmd_height_topic', '/cmd_height')
+        self.simulation             = self.get_parameter('simulation').get_parameter_value().bool_value
+        self.model_path             = self.get_parameter('model_path').get_parameter_value().string_value
+        self.config_path            = self.get_parameter('config_path').get_parameter_value().string_value
         self.joint_state_topic      = self.get_parameter('joint_state_topic').get_parameter_value().string_value
         self.joint_target_pos_topic = self.get_parameter('joint_target_pos_topic').get_parameter_value().string_value
         # self.cmd_height_topic           = self.get_parameter('cmd_height_topic').get_parameter_value().string_value
-        
-        # Inference rate
-        self.rate = 1.0 / 0.025
         
         # get parameter from config.yaml
         with open(self.config_path, 'r') as f:
             params = yaml.safe_load(f)
         
+        # Inference rate
+        self.rate = 1.0 / 0.025
         # 1.0 / (params['task']['sim']['dt'] * params['task']['env']['control']['decimation']) 
         self.rate_elegent = 1.0 / ( params['task']['sim']['dt'] * \
             ( params['task']['env']['control']['decimation'] + params['task']['env']['controlFrequencyInv']))
-        rclpy.logging.get_logger('rclpy.node').info('Inference rate: {}'.format(self.rate))
         
         self.action_scale       = params['task']['env']['control']['actionScale']    # 0.5  
         self.dofPositionScale   = params['task']['env']['learn']['qScale']           # 1.0
         self.dofVelocityScale   = params['task']['env']['learn']['qDotScale']        # 0.05
-        self.timeEpisode        = params['task']['env']['episodeLength']
-        self.cmd_vel_scale      = params['task']['env']['heightDes']
+        
         self.clip_obs           = params['task']['env']['clipObservations']
         self.num_act            = params['task']['env']['numActions']
         self.num_obs            = params['task']['env']['numObservations']
+        
+        self.timeEpisode        = params['task']['env']['episodeLength']
+        self.cmd_vel_scale      = params['task']['env']['heightDes']
         self.clip_act           = 1.0
         
         # I do not need the prismatic pos
@@ -107,14 +108,17 @@ class InferenceController(Node):
         # self.previous_action = np.zeros((self.njoint - 1,1))
 
         # Load PyTorch model and create timer
-        rclpy.logging.get_logger('rclpy.node').info('Loading model from {}'.format(self.model_path))
         self.model = build_rlg_model(self.model_path, params)
         # start inference
         self.timer = self.create_timer(1.0 / self.rate, self.inference_callback)
-        rclpy.logging.get_logger('rclpy.node').info('Model loaded. Node ready for inference.')
-        self.startup_time = rclpy.clock.Clock().now()
+        
+        self.startup_time = Clock().now()
         self.startup_time_obs = self.startup_time
-
+        
+        logging.get_logger('rclpy.node').info('Loading model from {}'.format(self.model_path))
+        logging.get_logger('rclpy.node').info('Model loaded. Node ready for inference.')
+        logging.get_logger('rclpy.node').info('Inference rate: {}'.format(self.rate))
+        
     @staticmethod
     def compute_q2( q1, offset=torch.pi/20 ):
         lower_bound = -(np.pi + q1 - offset)
@@ -128,7 +132,7 @@ class InferenceController(Node):
     
     def joint_state_callback(self, msg):
         # Assign to dict using the names in msg.name
-        t = rclpy.clock.Clock().now()
+        t = Clock().now()
         timestamp = t.nanoseconds / 1e9 # [s]
         for i in range(self.njoint):
             if (not np.isnan(msg.position[i]) and (not np.isnan(msg.velocity[i]))):
@@ -143,7 +147,7 @@ class InferenceController(Node):
         joint_msg = JointsCommand()
         if self.simulation:
             joint_msg = JointState()
-        joint_msg.header.stamp = rclpy.clock.Clock().now().to_msg()
+        joint_msg.header.stamp = Clock().now().to_msg()
         joint_msg.name = self.joint_names
         joint_msg.position = (self.default_dof).tolist()
         if not self.simulation:
@@ -169,34 +173,35 @@ class InferenceController(Node):
         obs_list = np.concatenate((      
             np.fromiter(list(self.joint_pos.values())[-2:], dtype=float).reshape((self.njoint - 1, 1)) / self.dofPositionScale,
             np.fromiter(list(self.joint_vel.values())[-2:],dtype=float).reshape((self.njoint - 1, 1)) / self.dofVelocityScale,
-            ## from SoftlegJump028_target6.pth
             np.reshape(self.previous_action, (self.njoint - 1, 1)),
-            np.array([(self.timeEpisode - (rclpy.clock.Clock().now().nanoseconds / 1e9 - self.startup_time_obs.nanoseconds / 1e9)) / self.timeEpisode]).reshape((1,1)) 
+            np.array([(self.timeEpisode - (Clock().now().nanoseconds / 1e9 - self.startup_time_obs.nanoseconds / 1e9)) / self.timeEpisode]).reshape((1,1)) 
         )).reshape((1, self.num_obs)) 
         
         
         obs_list = np.clip(obs_list, [-self.clip_obs] * self.num_obs, [self.clip_obs] * self.num_obs)         
+        
         action = run_inference(self.model, obs_list)
+        
         self.previous_action = np.reshape(action, (self.njoint - 1, 1))
         action = np.clip(action, [-self.clip_act] * (self.njoint - 1), [self.clip_act] * (self.njoint - 1))
         
         joint_msg = JointsCommand()
         if self.simulation:
             joint_msg = JointState()
-        joint_msg.header.stamp = rclpy.clock.Clock().now().to_msg()
+        joint_msg.header.stamp = Clock().now().to_msg()
         joint_msg.name = self.joint_names[-2:]
         
         action = np.squeeze(action)
-        if rclpy.clock.Clock().now() < (self.startup_time + rclpy.duration.Duration(seconds=5.0)):
-            self.startup_time_obs = rclpy.clock.Clock().now()
+        if Clock().now() < (self.startup_time + Duration(seconds=5.0)):
+            self.startup_time_obs = Clock().now()
             action *= 0.0
             joint_msg.position = self._avg_default_dof
         else:               
-            if rclpy.clock.Clock().now() > (self.startup_time_obs + rclpy.duration.Duration(seconds=2.0)):
-                rclpy.logging.get_logger('rclpy.node').info('Policy stops ...') 
+            if Clock().now() > (self.startup_time_obs + Duration(seconds=2.0)):
+                logging.get_logger('rclpy.node').info('Policy stops ...') 
                 joint_msg.position = self._avg_default_dof
             else:
-                rclpy.logging.get_logger('rclpy.node').info('Policy starts working ...') 
+                logging.get_logger('rclpy.node').info('Policy starts working ...') 
                 
                 ## SoftlegJump028_target4.pth to SoftlegJump029_target8.pth
                 # joint_msg.position = (np.clip(np.squeeze(action) * self.action_scale \
@@ -216,11 +221,16 @@ class InferenceController(Node):
         self.joint_target_pos_pub.publish(joint_msg)
 
 def main(args=None):
+    
     rclpy.init(args=args)
+    
     inference_controller = InferenceController()
     rclpy.spin(inference_controller)
+    
     inference_controller.destroy_node()
     rclpy.shutdown()
 
+
 if __name__ == '__main__':
+
     main()

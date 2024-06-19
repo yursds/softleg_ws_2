@@ -15,30 +15,18 @@ from ament_index_python.packages    import get_package_share_directory
 
 def generate_launch_description():
     
-    inference_ctrl_config = 'inference_ctrl_config_sim.yaml'
-    RL_param_file         = 'config_minimal.yaml'
-    RL_model_file         = 'SoftlegJump040_target13.pth'
+    ctrl_param_folder = 'config'
+    model_rl_folder   = 'models'
+    inference_config  = 'inference_ctrl_config_sim.yaml'
+    RL_param_file     = 'config_minimal.yaml'
+    RL_model_file     = 'SoftlegJump040_target13.pth'
     
-    # definition of controller parameters
-    ctrl_params = os.path.join(
-        get_package_share_directory('rlg_quad_controller'),
-        'config',
-        inference_ctrl_config
-        )
+    path_pkg = get_package_share_directory('rlg_quad_controller')
     
-    # definition of modelRL_path
-    configRL_path = os.path.join(
-        get_package_share_directory('rlg_quad_controller'),
-        'models',
-        RL_param_file
-        )
-    
-    # definition of configRL_path
-    weightsRL_path = os.path.join(
-        get_package_share_directory('rlg_quad_controller'),
-        'models',
-        RL_model_file
-        )
+    # definition of controller parameters, modelRL_path, configRL_path
+    ctrl_params    = os.path.join(path_pkg, ctrl_param_folder, inference_config)
+    configRL_path  = os.path.join(path_pkg, model_rl_folder, RL_param_file)
+    weightsRL_path = os.path.join(path_pkg, model_rl_folder, RL_model_file)
     
     # node inference_controller
     node = Node(

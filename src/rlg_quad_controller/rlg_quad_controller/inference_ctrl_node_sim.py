@@ -1,4 +1,5 @@
-#
+# This node subscribes to the joint states topics, and publishes the target joint positions.
+# joint_pos  ---> | inference_controller | ---> joint_target_pos --> PD contr
 
 import rclpy
 import torch
@@ -13,29 +14,30 @@ from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Twist, Point
 from .utils.rlg_utils import build_rlg_model, run_inference
 
-"""
-This node subscribes to the joint states topics, and publishes the target joint positions.
-
-joint_pos  ---> | inference_controller | ---> joint_target_pos --> PD contr
-
-"""
 
 class InferenceController(Node):
-    """ Load model of RL and do inference. \n
-    parameters to set:  model_path, config_path """
+    """ Load model of RL and do inference. Parameters possible to set: \n
+        - 'simulation' \n
+        - 'joint_state_topic' \n
+        - 'joint_target_pos_topic' \n
+        - 'model_path' \n
+        - 'config_path' 
+        """
     
     def __init__(self):
         
         super().__init__(node_name='inference_controller')
+        
         self.time_init = time.time()
         
-        # Declare default values, then get values (from Node(parameters=[])) and set as attributes
+        # Declare default values
         self.declare_parameter('simulation', False)
         self.declare_parameter('joint_state_topic', '/state_broadcaster/joint_states')
         self.declare_parameter('joint_target_pos_topic', '/joint_controller/command')
         self.declare_parameter('model_path', '')
         self.declare_parameter('config_path', '')
         
+        # Get values (from Node(parameters=[])) and set as attributes
         self.simulation             = self.get_parameter('simulation').get_parameter_value().bool_value
         self.model_path             = self.get_parameter('model_path').get_parameter_value().string_value
         self.config_path            = self.get_parameter('config_path').get_parameter_value().string_value
@@ -48,9 +50,6 @@ class InferenceController(Node):
         
         # Inference rate
         self.rate = 1.0 / 0.025
-        # 1.0 / (params_rl['task']['sim']['dt'] * params_rl['task']['env']['control']['decimation']) 
-        self.rate_elegent = 1.0 / (params_rl['task']['sim']['dt'] * \
-            ( params_rl['task']['env']['control']['decimation'] + params_rl['task']['env']['controlFrequencyInv']))
         
         self.action_scale       = params_rl['task']['env']['control']['actionScale']    # 0.5  
         self.dofPositionScale   = params_rl['task']['env']['learn']['qScale']           # 1.0

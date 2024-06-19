@@ -24,9 +24,9 @@ class GetUp(Node):
         
         # Init topic definitions
         self.declare_parameter('joint_target_pos_topic', '/joint_controller/command')
-        self.joint_target_pos_topic = self.get_parameter('joint_target_pos_topic').get_parameter_value().string_value
         self.declare_parameter('joint_state_topic', '/state_broadcaster/joints_state')
-        self.joint_state_topic = self.get_parameter('joint_state_topic').get_parameter_value().string_value
+        self.joint_target_pos_topic = self.get_parameter('joint_target_pos_topic').get_parameter_value().string_value
+        self.joint_state_topic      = self.get_parameter('joint_state_topic').get_parameter_value().string_value
         
         # Initialize joint publisher/subscriber
         self.njoint = 2

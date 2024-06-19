@@ -1,34 +1,11 @@
 task:
-  name: SoftlegJumpCinque
   env:
     numActions: 2
     numObservations: 7
     clipObservations: 100.0
-    clipActions: 15.0
-    controlFrequencyInv: 4
     episodeLength: 2.0
     heightDes: 1.0
-    defaultJointAngles:
-      softleg_1_cart_joint: 0.11
-      softleg_1_hip_joint: -0.75
-      softleg_1_knee_joint: -0.75
-    initState:
-      q:
-      - 0.11
-      - -0.75
-      - -0.75
-      qDot:
-      - 0.0
-      - 0.0
-      - 0.0
     control:
-      stiffness:
-      - 0.8674531575294934
-      - 0.8674531575294935
-      damping:
-      - 0.08674531575294935
-      - 0.08674531575294935
-      decimation: 1
       actionScale: 3.141592653589793
     learn:
       qScale: 3.141592653589793
@@ -37,11 +14,6 @@ task:
     dt: 0.005
 train:
   params:
-    seed: ${...seed}
-    algo:
-      name: a2c_continuous
-    model:
-      name: continuous_a2c_logstd
     network:
       name: actor_critic
       separate: false

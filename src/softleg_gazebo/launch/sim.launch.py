@@ -32,10 +32,10 @@ def generate_launch_description(urdf_file:str = 'softlegisaac.urdf',):
     use_sim_time = SetParameter(name='use_sim_time', value=True)
     
     # define path and content of .urdf file
-    softleg_description_path = os.path.join(
-        get_package_share_directory('softleg_description'), 'urdf', urdf_file)
+    pkg_path                    = get_package_share_directory('softleg_description')
+    softleg_description_path    = os.path.join(pkg_path, 'urdf', urdf_file)
     softleg_description_content = open(softleg_description_path).read()
-    robot_description = {"robot_description": softleg_description_content}
+    robot_description           = {"robot_description": softleg_description_content}
     
     # ======================================== LAUNCH ============================================ #
     # launch gazebo.launch.py

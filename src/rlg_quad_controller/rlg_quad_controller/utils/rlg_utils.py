@@ -37,7 +37,7 @@ def build_rlg_model(weights_path, params):
     return model
 
 
-def run_inference(model, observation):
+def run_inference(model, observation) -> np.ndarray:
     """
     Runs inference on a model given an observation.
 

@@ -32,39 +32,37 @@ class InferenceController(Node):
         super().__init__(node_name='inference_controller')
         
         # Declare default values
-        self.declare_parameter('simulation', True)
+        self.declare_parameter('simulation', False)
         self.declare_parameter('joint_state_topic', '/state_broadcaster/joint_states')
         self.declare_parameter('joint_target_pos_topic', '/joint_controller/command')
+        self.declare_parameter('duration', 2.0)
+        self.declare_parameter('wait_t', 5.0)
         self.declare_parameter('model_path', '')
         self.declare_parameter('config_path', '')
         self.declare_parameter('joint_names', ['softleg_1_cart_joint','softleg_1_hip_joint','softleg_1_knee_joint'])
         
         # Get values (from Node(parameters=[])) and set as attributes
         self.simulation             = self.get_parameter('simulation').get_parameter_value().bool_value
+        self.duration               = self.get_parameter('duration').get_parameter_value().double_value
+        self.wait_t                 = self.get_parameter('wait_t').get_parameter_value().double_value
         self.model_path             = self.get_parameter('model_path').get_parameter_value().string_value
         self.config_path            = self.get_parameter('config_path').get_parameter_value().string_value
         self.joint_state_topic      = self.get_parameter('joint_state_topic').get_parameter_value().string_value
         self.joint_target_pos_topic = self.get_parameter('joint_target_pos_topic').get_parameter_value().string_value
         self.joint_names            = self.get_parameter('joint_names').get_parameter_value().string_array_value
         
+        self.get_logger().info(f'---------------------')
+        self.get_logger().info(f'{self.wait_t}')
+        
         # NOTE: check if this node is launched in a simulation!
         if not self.simulation:
             raise ("\nERROR!!! set simulation parameter to TRUE\n")
         
-        # Initialize joint subscriber
+        # Initialize joint number
         self.njoint_active = len(self.joint_names)
-        self.n_joint       = len(self.joint_names) +1 # only in gazebo the cart joint is published
+        self.n_joint       = len(self.joint_names) + 1 # only in gazebo the cart joint is published
         # quality of service
         qos = 10
-        
-        # build rl model and get rl parameters for action and observation
-        self.set_param_rl_as_attr()
-        
-        # not need the prismatic pos
-        self.default_dof      = np.array([-np.pi, 2.75])
-        self.previous_action  = (self.default_dof / self.action_scale).tolist()
-        self._avg_default_dof = self.default_dof.tolist()
-        
         self.joint_des_pub = self.create_publisher(JointState, self.joint_target_pos_topic, qos)
         self.joint_sub     = self.create_subscription(JointState, self.joint_state_topic, self.joint_state_callback, qos)
         
@@ -72,10 +70,29 @@ class InferenceController(Node):
         self.joint_pos = {self.joint_names[i]:0.0 for i in range(self.njoint_active)}
         self.joint_vel = {self.joint_names[i]:0.0 for i in range(self.njoint_active)}
         
+        # build rl model and get rl parameters for action and observation
+        self.set_param_rl_as_attr()
+        
+        # not need the prismatic pos
+        self.default_dof      = np.array([-np.pi, 2.75])
+        self.previous_action  = np.asarray(self.default_dof / self.action_scale).flatten()
+        self._avg_default_dof = self.default_dof.tolist()
+        
         # set timer for inference callback
         self.timer            = self.create_timer(1.0 / self.rate, self.inference_callback)
         self.startup_time     = self.get_clock().now()
         self.startup_time_obs = self.startup_time
+        
+        # additional flags
+        self._policy_start    = False
+        self._policy_stop     = False
+        
+        # init msg to publish
+        self.joint_msg          = JointState()
+        self.joint_msg.name     = self.joint_names
+        self.joint_msg.position = self._avg_default_dof
+        self.joint_msg.velocity = np.zeros(self.njoint_active).tolist()
+        self.joint_msg.effort   = np.zeros(self.njoint_active).tolist()
         
         # logging
         self.get_logger().info(f'Loading model from {self.model_path}')
@@ -139,40 +156,44 @@ class InferenceController(Node):
         Callback function for inference timer. Infers joints target_pos from model and publishes it.
         """
         
-        obs_list = (np.concatenate((      
+        joint_msg = self.joint_msg
+        
+        obs_list = np.asarray(np.concatenate((      
             np.array(list(self.joint_pos.values())) / self.dofPositionScale,
             np.array(list(self.joint_vel.values())) / self.dofVelocityScale,
-            np.reshape(self.previous_action, (self.njoint_active,)),
-            np.array([(self.timeEpisode - (self.get_clock().now().nanoseconds - self.startup_time_obs.nanoseconds))/ 1e9  / self.timeEpisode]).reshape((1,)) 
+            self.previous_action,
+            np.array([(self.timeEpisode - (self.get_clock().now().nanoseconds - self.startup_time_obs.nanoseconds)) / 1e9 / self.timeEpisode])
         ))).reshape((1, self.num_obs))
         
         obs_list = np.clip(obs_list, [-self.clip_obs] * self.num_obs, [self.clip_obs] * self.num_obs)         
         
         action = run_inference(self.model, obs_list)
-        
-        self.previous_action = np.reshape(action, (self.njoint_active, 1))
+        self.previous_action = np.asarray(action).flatten()
         action = np.clip(action, [-self.clip_act] * (self.njoint_active), [self.clip_act] * (self.njoint_active))
         
-        joint_msg = JointState()
-        joint_msg.header.stamp = self.get_clock().now().to_msg()
-        joint_msg.name = self.joint_names
-        
         action = np.squeeze(action)
-        if self.get_clock().now() < (self.startup_time + Duration(seconds=5.0)):
+        now_t = self.get_clock().now()
+        
+        if now_t < (self.startup_time + Duration(seconds = self.duration)):
             self.startup_time_obs = self.get_clock().now()
             action *= 0.0
-            joint_msg.position = self._avg_default_dof
         else:               
-            if self.get_clock().now() > (self.startup_time_obs + Duration(seconds=2.0)):
-                self.get_logger().info('Policy stops ...') 
-                joint_msg.position = self._avg_default_dof
+            if now_t > (self.startup_time_obs + Duration(seconds = self.wait_t)):
+                msg_position = self._avg_default_dof
+                if not self._policy_stop:
+                    self.get_logger().info('Policy stopped')
+                    self._policy_stop = True 
             else:
-                self.get_logger().info('Policy starts working ...')
-                joint_msg.position = (np.squeeze(action) * self.action_scale).tolist()
+                msg_position = np.asarray(action * self.action_scale).tolist()
+            
+            joint_msg.position     = msg_position
+            if not self._policy_start:
+                self.get_logger().info('Policy started')
+                self._policy_start = True
         
-        joint_msg.velocity = np.zeros(self.njoint_active).tolist()
-        joint_msg.effort = np.zeros(self.njoint_active).tolist()
+        joint_msg.header.stamp = self.get_clock().now().to_msg()
         self.joint_des_pub.publish(joint_msg)
+
 
 
 def main(args=None):

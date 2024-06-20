@@ -17,17 +17,19 @@ from ament_index_python.packages    import get_package_share_directory
 def generate_launch_description():
     
     # setup variables path
-    ctrl_param_folder = 'config' # contain simulation flag
-    model_rl_folder   = 'models'
+    folder_ctrl_param = 'config' # contain simulation flag
+    folder_model_rl   = 'models'
+    
     inference_config  = 'inference_ctrl_config_sim.yaml'
     RL_param_file     = 'config_minimal.yaml'
-    RL_model_file     = 'SoftlegJump040_target13.pth'
+    RL_pth_file       = 'SoftlegJump040_target13.pth'
+    
     path_pkg          = get_package_share_directory('rlg_quad_controller')
     
     # definition of controller parameters, modelRL_path, configRL_path
-    ctrl_params    = os.path.join(path_pkg, ctrl_param_folder, inference_config)
-    configRL_path  = os.path.join(path_pkg, model_rl_folder, RL_param_file)
-    weightsRL_path = os.path.join(path_pkg, model_rl_folder, RL_model_file)
+    ctrl_params    = os.path.join(path_pkg, folder_ctrl_param, inference_config)
+    configRL_path  = os.path.join(path_pkg, folder_model_rl, RL_param_file)
+    weightsRL_path = os.path.join(path_pkg, folder_model_rl, RL_pth_file)
     joint_names    = ['softleg_1_hip_joint', 'softleg_1_knee_joint']
     
     # node inference_controller

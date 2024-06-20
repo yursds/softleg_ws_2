@@ -51,7 +51,7 @@ def generate_launch_description():
         # cmd=['ros2', 'bag', 'record', '-a', '-o', 'bag_to_delete', '-s', 'mcap'],
         # output='screen'
         # ),
-        jumping_node,
+        #jumping_node,
         policy,
     ])
     

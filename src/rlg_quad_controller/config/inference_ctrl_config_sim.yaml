@@ -6,3 +6,6 @@ inference_controller:
     joint_target_pos_topic: "/PD_control/command"
     rate: 10  # not used
     simulation: True
+    
+    duration : 2.0
+    wait_t : 5.0

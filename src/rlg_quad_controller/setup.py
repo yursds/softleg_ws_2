@@ -27,8 +27,10 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'inference_controller = rlg_quad_controller.inference_ctrl_node_sim:main'
-            # 'inference_controller = rlg_quad_controller.inference_controller_bag:main'
+            'inference_controller = rlg_quad_controller.inference_ctrl_node_sim:main',
         ],
+        # 'console_scripts': [
+        #     'inference_controller = rlg_quad_controller.inference_error:main'
+        # ],
     },
 )

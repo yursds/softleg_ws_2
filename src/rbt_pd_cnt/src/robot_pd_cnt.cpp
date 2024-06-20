@@ -20,7 +20,6 @@ namespace rbt_pd_cnt
     jnt_cmd_sub_(nullptr)
     {
         logger_name_ = "Robot_PD_Controller";
-        
     }
     CallbackReturn Rbt_PD_cnt::on_init()
     {

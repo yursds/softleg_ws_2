@@ -69,7 +69,7 @@ def generate_launch_description():
 
         policy = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
-                        [PathJoinSubstitution([FindPackageShare("rlg_quad_controller"), "launch", "softleg_inference.launch.py"])]
+                        [PathJoinSubstitution([FindPackageShare("rlg_quad_controller"), "launch", "inference_real.launch.py"])]
                 ),
         )
 

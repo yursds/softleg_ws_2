@@ -19,11 +19,9 @@ def generate_launch_description():
     # setup variables path
     folder_ctrl_param = 'config' # contain simulation flag
     folder_model_rl   = 'models'
-    
     inference_config  = 'inference_ctrl_config_sim.yaml'
     RL_param_file     = 'config_minimal.yaml'
     RL_pth_file       = 'SoftlegJump040_target13.pth'
-    
     path_pkg          = get_package_share_directory('rlg_quad_controller')
     
     # definition of controller parameters, modelRL_path, configRL_path

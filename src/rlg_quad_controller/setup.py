@@ -28,9 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'inference_controller = rlg_quad_controller.inference_ctrl_node_sim:main',
+            'inference_controller_err = rlg_quad_controller.inference_error:main',
         ],
-        # 'console_scripts': [
-        #     'inference_controller = rlg_quad_controller.inference_error:main'
-        # ],
     },
 )

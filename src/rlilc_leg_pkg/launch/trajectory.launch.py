@@ -1,0 +1,61 @@
+# This is a launch file to test inference controller in gazebo.
+# Controller needs parameters of itself, modelRL_path and configRL_path to built RL model.
+# ------------------------------------------------------------------------------------------------- #
+# LAUNCHED FILES
+#
+# node:     - pkg(rlilc_leg_pkg) inference_controller # defined in setup.py
+# ------------------------------------------------------------------------------------------------ #
+
+import os
+
+from launch                         import LaunchDescription
+from launch_ros.actions             import Node
+
+from ament_index_python.packages    import get_package_share_directory
+
+from launch                             import LaunchDescription
+from launch.actions                     import IncludeLaunchDescription, RegisterEventHandler
+
+from launch.substitutions               import PathJoinSubstitution
+from launch.launch_description_sources  import PythonLaunchDescriptionSource
+from launch.event_handlers              import OnProcessExit
+
+def generate_launch_description():
+    
+    # setup variables path
+    folder_ctrl_param = 'config' # contain simulation flag
+    traj_config       = 'rlilc_leg_config.yaml'
+    path_pkg          = get_package_share_directory('rlilc_leg_pkg')
+    
+    # definition of controller parameters, modelRL_path, configRL_path
+    ctrl_params    = os.path.join(path_pkg, folder_ctrl_param, traj_config)
+    
+    # node rlilc_controller
+    trajectory = Node(
+        package    = 'rlilc_leg_pkg',
+        name       = 'trajectory_node',        # the name is set in the main of inference_ctrl_node_sim
+        executable = 'trajectory_node',    # the name of executable is set in setup.py
+        parameters = [
+            ctrl_params,
+            ],
+        output     = "screen"
+    )
+    
+    # node rlilc_controller
+    fake_pd = Node(
+        package    = 'rlilc_leg_pkg',
+        name       = 'fake_pd_node',        # the name is set in the main of inference_ctrl_node_sim
+        executable = 'fake_pd_node',    # the name of executable is set in setup.py
+        parameters = [
+            ctrl_params,
+            ],
+        output     = "screen"
+    )
+    
+    # output
+    ld = LaunchDescription([
+        trajectory,
+        fake_pd,
+    ])
+    
+    return ld

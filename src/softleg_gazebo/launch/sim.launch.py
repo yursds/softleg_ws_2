@@ -86,7 +86,7 @@ def generate_launch_description(urdf_file:str = 'softlegisaac.urdf',):
     PD_control = Node(
         package    = "controller_manager",
         executable = "spawner",
-        arguments  = ["PD_control", "--controller-manager", "/controller_manager"],
+        arguments  = ["joint_controller", "--controller-manager", "/controller_manager"],
     )
     PD_control_attend = RegisterEventHandler(
         event_handler = OnProcessExit(

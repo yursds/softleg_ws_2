@@ -8,4 +8,4 @@ inference_controller:
     simulation: True
     
     duration : 2.0
-    wait_t : 5.0
+    wait_t : 25.0

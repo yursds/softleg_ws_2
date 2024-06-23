@@ -3,7 +3,8 @@
         {
             "includePath": [
                 "${workspaceFolder}/**",
-                "/opt/ros/humble/include/**"  // if you use ros-humble
+                "/opt/ros/humble/include/**",  // if you use ros-humble
+                "/bin/python3/**"
             ],
             "defines": [],
             "intelliSenseMode": "linux-gcc-x64", // if you use linux

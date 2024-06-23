@@ -73,7 +73,6 @@ namespace rbt_pd_cnt
             velocity_map_.emplace(std::make_pair(joint, 0.0));
         }
         
-        
         jnt_cmd_sub_ = get_node()->create_subscription<CmdType>(
             "~/command", 5,
             [this](const CmdType::SharedPtr msg){
@@ -146,8 +145,6 @@ namespace rbt_pd_cnt
         const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/
     )
     {
-        
-        
         for(size_t i = 0; i< command_interfaces_.size(); i++)
         {
            

@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------------------------- #
 # LAUNCHED FILES
 #
-# node:     - pkg(rlg_quad_controller) inference_controller # defined in setup.py
+# node:     - pkg(rlilc_leg_pkg) inference_controller # defined in setup.py
 # ------------------------------------------------------------------------------------------------ #
 
 import os
@@ -19,10 +19,10 @@ def generate_launch_description():
     # setup variables path
     folder_ctrl_param = 'config' # contain simulation flag
     folder_model_rl   = 'models'
-    inference_config  = 'inference_ctrl_config_sim.yaml'
+    inference_config  = 'rlilc_ctrl_config_sim.yaml'
     RL_param_file     = 'config_minimal.yaml'
     RL_pth_file       = 'SoftlegJump040_target13.pth'
-    path_pkg          = get_package_share_directory('rlg_quad_controller')
+    path_pkg          = get_package_share_directory('rlilc_leg_pkg')
     
     # definition of controller parameters, modelRL_path, configRL_path
     ctrl_params    = os.path.join(path_pkg, folder_ctrl_param, inference_config)
@@ -30,11 +30,11 @@ def generate_launch_description():
     weightsRL_path = os.path.join(path_pkg, folder_model_rl, RL_pth_file)
     joint_names    = ['softleg_1_hip_joint', 'softleg_1_knee_joint']
     
-    # node inference_controller
+    # node rlilc_controller
     node = Node(
-        package    = 'rlg_quad_controller',
-        name       = 'inference_controller',        # the name is set in the main of inference_ctrl_node_sim
-        executable = 'inference_controller',    # the name of executable is set in setup.py
+        package    = 'rlilc_leg_pkg',
+        name       = 'rlilc_controller',        # the name is set in the main of inference_ctrl_node_sim
+        executable = 'rlilc_controller',    # the name of executable is set in setup.py
         parameters = [
             ctrl_params,
             {'config_path': configRL_path},

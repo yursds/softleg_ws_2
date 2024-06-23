@@ -40,7 +40,7 @@ def generate_launch_description():
 
     policy = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            [PathJoinSubstitution([FindPackageShare("rlg_quad_controller"), "launch", "inference_sim.launch.py"])]
+            [PathJoinSubstitution([FindPackageShare("rlilc_leg_pkg"), "launch", "rlilc_sim.launch.py"])]
         ),
     )
 

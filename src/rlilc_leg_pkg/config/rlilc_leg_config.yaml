@@ -1,0 +1,35 @@
+# # config.yaml
+
+trajectory_node:
+  
+  ros__parameters:
+    
+    joint_names : ['softleg_1_hip_joint','softleg_1_knee_joint']
+    
+    topic :
+      joint_state    : '/joint_states'
+      high_rate_traj : '/high_rate_traj'
+      low_rate_traj  : '/low_rate_traj'
+    
+    rate :
+      high_rate : 200.0
+      low_rate  : 50.0
+
+    task :
+      duration : 20.0
+      wait_t   : 5.0
+
+
+fake_pd_node:
+  
+  ros__parameters:
+    
+    joint_names: ['softleg_1_hip_joint','softleg_1_knee_joint']
+    
+    topic:
+      joint_state : '/joint_states'
+      des_traj    : '/high_rate_traj'
+      command     : "/joint_controller/command"
+    
+    rate: 200.0
+    

@@ -2,6 +2,5 @@
 /install
 /log
 .gitignore
-/configs
 docker-enter.sh
 run.bash

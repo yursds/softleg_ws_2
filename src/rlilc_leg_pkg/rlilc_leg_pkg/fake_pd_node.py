@@ -47,7 +47,6 @@ class FakePD(Node):
         self.declare_parameter('topic.joint_state', '/state_broadcaster/joint_states')
         self.declare_parameter('topic.des_traj', '/high_rate_traj')
         self.declare_parameter('topic.command', '/joint_controller/command')
-        
         self.declare_parameter('rate', 200.0)
         
         # Get values (from Node(parameters=[])) and set as attributes
@@ -55,8 +54,7 @@ class FakePD(Node):
         self.topic_joint_state = self.get_parameter('topic.joint_state').get_parameter_value().string_value
         self.topic_des_traj    = self.get_parameter('topic.des_traj').get_parameter_value().string_value
         self.topic_command     = self.get_parameter('topic.command').get_parameter_value().string_value
-        
-        self.rate = self.get_parameter('rate').get_parameter_value().double_value
+        self.rate              = self.get_parameter('rate').get_parameter_value().double_value
         
         # logging
         self.get_logger().info(f'joint_names: {self.joint_names}')
@@ -106,11 +104,8 @@ class FakePD(Node):
     def command_callback(self):
         """ Callback function for command reference. """
         
-        self.get_logger().info(f'\n\n\n self.pos_des.values() {self.pos_des.values()}')
-        self.get_logger().info(f'\n\n\n all(value is float for value in self.pos_des.values())\
-            {all(isinstance(value, float) for value in self.pos_des.values())}')
         if all(isinstance(value, float) for value in self.pos_des.values()):
-            self.get_logger().info(f'\n\n\n self.pos_des {self.pos_des.values()}')
+            
             self.command_msg.position = list(self.pos_des.values())
             self.command_msg.velocity = list(self.vel_des.values())
             

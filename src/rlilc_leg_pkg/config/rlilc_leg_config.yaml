@@ -18,6 +18,8 @@ trajectory_node:
     task :
       duration : 20.0
       wait_t   : 5.0
+      pf       : [5.0, 0.5]
+    
 
 
 fake_pd_node:

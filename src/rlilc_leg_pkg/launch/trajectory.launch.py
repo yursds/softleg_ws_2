@@ -13,14 +13,12 @@ from launch_ros.actions             import Node
 
 from ament_index_python.packages    import get_package_share_directory
 
-from launch                             import LaunchDescription
-from launch.actions                     import IncludeLaunchDescription, RegisterEventHandler
-
-from launch.substitutions               import PathJoinSubstitution
-from launch.launch_description_sources  import PythonLaunchDescriptionSource
-from launch.event_handlers              import OnProcessExit
 
 def generate_launch_description():
+    
+    urdf_file                   = 'softlegisaac.urdf'
+    description_pkg_path        = get_package_share_directory('softleg_description')
+    softleg_description_path    = os.path.join(description_pkg_path, 'urdf', urdf_file)
     
     # setup variables path
     folder_ctrl_param = 'config' # contain simulation flag
@@ -36,6 +34,7 @@ def generate_launch_description():
         name       = 'trajectory_node',        # the name is set in the main of inference_ctrl_node_sim
         executable = 'trajectory_node',    # the name of executable is set in setup.py
         parameters = [
+            {'urdf_path': softleg_description_path},
             ctrl_params,
             ],
         output     = "screen"

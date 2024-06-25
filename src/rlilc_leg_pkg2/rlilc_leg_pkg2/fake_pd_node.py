@@ -111,15 +111,19 @@ class FakePD(Node):
     def command_callback(self):
         """ Callback function for command reference. """
         
+        if all(isinstance(value, float) for value in self.pos_curr.values()):
+            
+            G_vec = self.robot.getGravity(torch.tensor([list(self.pos_curr.values())]).T)
+            self.command_msg.effort   = G_vec.flatten().tolist()
+        
         if all(isinstance(value, float) for value in self.pos_des.values()):
             
-            G_vec = self.robot.getGravity(torch.tensor([list(self.pos_des.values())]).T)
-            self.command_msg.position = list(self.pos_des.values())
-            self.command_msg.velocity = list(self.vel_des.values())
-            self.command_msg.effort   = G_vec.flatten().tolist()
+            self.command_msg.position = list(self.pos_des.values())*0 + list([0.75, 0.75])
+            self.command_msg.velocity = list(self.vel_des.values())*0
             
             self.command_msg.header.stamp = self.get_clock().now().to_msg()
-            self.command_pub.publish(self.command_msg)
+        
+        self.command_pub.publish(self.command_msg)
 
 
 def main(args=None):

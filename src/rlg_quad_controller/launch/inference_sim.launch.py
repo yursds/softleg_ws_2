@@ -33,8 +33,8 @@ def generate_launch_description():
     # node inference_controller
     node = Node(
         package    = 'rlg_quad_controller',
-        name       = 'inference_controller',        # the name is set in the main of inference_ctrl_node_sim
-        executable = 'inference_controller',    # the name of executable is set in setup.py
+        name       = 'inference_controller_err',        # the name is set in the main of inference_ctrl_node_sim
+        executable = 'inference_controller_err',    # the name of executable is set in setup.py
         parameters = [
             ctrl_params,
             {'config_path': configRL_path},

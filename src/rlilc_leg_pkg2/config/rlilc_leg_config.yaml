@@ -4,7 +4,7 @@ trajectory_node:
   
   ros__parameters:
     
-    joint_names : ['softleg_1_hip_joint','softleg_1_knee_joint']
+    joint_names : ['LH_HFE', 'LH_KFE']
     
     topic :
       joint_state    : '/joint_states'
@@ -16,7 +16,7 @@ trajectory_node:
       low_rate  : 50.0
 
     task :
-      duration : 20.0
+      duration : 2.0
       wait_t   : 5.0
       pf       : [-0.25, 0.0]
     
@@ -26,7 +26,7 @@ fake_pd_node:
   
   ros__parameters:
     
-    joint_names: ['softleg_1_hip_joint','softleg_1_knee_joint']
+    joint_names: ['LH_HFE', 'LH_KFE']
     
     topic:
       joint_state : '/joint_states'

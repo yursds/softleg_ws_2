@@ -47,7 +47,7 @@ class TrajectoryGen(Node):
         self.qi = None
         
         # istance model based of robot
-        robot    = Sim_RR(urdf_path=self.urdf_path, ee_name='contact_joint')
+        robot    = Sim_RR(urdf_path=self.urdf_path, ee_name='LH_ANKLE')
         trasl, _ = robot.getForwKinEE(q = torch.zeros(2,1))      # if you want set w.r.t. current position, move these lines to self.joint_state_callback
         pf       = (torch.tensor(self.pf)).view(-1,1) + trasl
         inv      = InvKin(robot = robot, pf = pf)

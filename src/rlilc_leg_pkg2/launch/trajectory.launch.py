@@ -13,24 +13,23 @@ from launch_ros.actions             import Node
 
 from ament_index_python.packages    import get_package_share_directory
 
-
 def generate_launch_description():
     
-    urdf_file                   = 'softlegisaac.urdf'
-    description_pkg_path        = get_package_share_directory('softleg_description')
+    urdf_file                   = 'leg_constrained.urdf'
+    description_pkg_path        = get_package_share_directory('mulinex_description')
     softleg_description_path    = os.path.join(description_pkg_path, 'urdf', urdf_file)
     
     # setup variables path
     folder_ctrl_param = 'config' # contain simulation flag
     traj_config       = 'rlilc_leg_config.yaml'
-    path_pkg          = get_package_share_directory('rlilc_leg_pkg')
+    path_pkg          = get_package_share_directory('rlilc_leg_pkg2')
     
     # definition of controller parameters, modelRL_path, configRL_path
     ctrl_params    = os.path.join(path_pkg, folder_ctrl_param, traj_config)
     
     # node rlilc_controller
     trajectory = Node(
-        package    = 'rlilc_leg_pkg',
+        package    = 'rlilc_leg_pkg2',
         name       = 'trajectory_node',        # the name is set in the main of inference_ctrl_node_sim
         executable = 'trajectory_node',    # the name of executable is set in setup.py
         parameters = [
@@ -42,7 +41,7 @@ def generate_launch_description():
     
     # node rlilc_controller
     fake_pd = Node(
-        package    = 'rlilc_leg_pkg',
+        package    = 'rlilc_leg_pkg2',
         name       = 'fake_pd_node',        # the name is set in the main of inference_ctrl_node_sim
         executable = 'fake_pd_node',    # the name of executable is set in setup.py
         parameters = [

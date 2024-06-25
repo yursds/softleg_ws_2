@@ -4,3 +4,4 @@
 .gitignore
 docker-enter.sh
 run.bash
+.*

@@ -21,6 +21,7 @@ namespace rbt_pd_cnt
     {
         logger_name_ = "Robot_PD_Controller";
     }
+    
     CallbackReturn Rbt_PD_cnt::on_init()
     {
         first_time_ = true;
@@ -38,6 +39,7 @@ namespace rbt_pd_cnt
         return CallbackReturn::SUCCESS;
         
     }
+    
     CallbackReturn Rbt_PD_cnt::on_configure(const rclcpp_lifecycle::State & )
     {
         joint_ = get_node()->get_parameter("joint").as_string_array();
@@ -82,11 +84,10 @@ namespace rbt_pd_cnt
         //jnt_pos_stt_.resize(init_pos_.size());
         std::vector<double> zeros(init_pos_.size(),0.0);
         jnt_cmd_.set__position(init_pos_);
-        jnt_stt_.set__position(init_pos_);
-
         jnt_cmd_.set__velocity(zeros);
         jnt_cmd_.set__effort(zeros);
         
+        jnt_stt_.set__position(init_pos_);
         jnt_stt_.set__velocity(zeros);
         jnt_stt_.set__effort(zeros);
         
@@ -94,31 +95,10 @@ namespace rbt_pd_cnt
             "~/command", rclcpp::SystemDefaultsQoS(),
             [this](const CmdType::SharedPtr msg){rt_command_ptr_.writeFromNonRT(msg);}
         );
-        jnt_stt_pub_ = get_node()->create_publisher<CmdType>("Joint_Feedback",10);
+        jnt_stt_pub_ = get_node()->create_publisher<CmdType>("PD_joint_state",10);
 
         RCLCPP_INFO(get_node()->get_logger(),"configure succesfull");
         return CallbackReturn::SUCCESS;
-    }  
-
-    controller_interface::InterfaceConfiguration Rbt_PD_cnt::command_interface_configuration() const
-    {
-        controller_interface::InterfaceConfiguration command_interface_config;
-        command_interface_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
-        for(const auto & joint : joint_)
-            command_interface_config.names.push_back(joint + "/" + hardware_interface::HW_IF_EFFORT);
-        return command_interface_config;
-    }
-
-    controller_interface::InterfaceConfiguration Rbt_PD_cnt::state_interface_configuration() const
-    {
-        controller_interface::InterfaceConfiguration state_interface_config;
-        state_interface_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
-        for(const auto & joint : joint_)
-        {
-            state_interface_config.names.push_back(joint + "/" + hardware_interface::HW_IF_POSITION);
-            state_interface_config.names.push_back(joint + "/" + hardware_interface::HW_IF_VELOCITY);
-        }
-        return state_interface_config;
     }
 
     CallbackReturn Rbt_PD_cnt::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
@@ -130,20 +110,20 @@ namespace rbt_pd_cnt
         std::vector<std::reference_wrapper<LoanedStateInterface>> ordered_stt_interfaces_v,ordered_stt_interfaces_p;
         if (
             !controller_interface::get_ordered_interfaces(
-            command_interfaces_, joint_, hardware_interface::HW_IF_EFFORT, ordered_interfaces) ||
-            command_interfaces_.size() != ordered_interfaces.size())
+                command_interfaces_, joint_, hardware_interface::HW_IF_EFFORT, ordered_interfaces)
+            || command_interfaces_.size() != ordered_interfaces.size())
         {
             RCLCPP_ERROR(
             get_node()->get_logger(), "Expected %zu effort command interfaces, got %zu", joint_.size(),
             ordered_interfaces.size());
             return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
         }
-         if (
+        if (
             !controller_interface::get_ordered_interfaces(
-            state_interfaces_, joint_, hardware_interface::HW_IF_POSITION, ordered_stt_interfaces_p) ||
-             !controller_interface::get_ordered_interfaces(
-            state_interfaces_, joint_, hardware_interface::HW_IF_VELOCITY, ordered_stt_interfaces_v) ||
-            state_interfaces_.size() != ordered_stt_interfaces_p.size() + ordered_stt_interfaces_v.size())
+                state_interfaces_, joint_, hardware_interface::HW_IF_POSITION, ordered_stt_interfaces_p) ||
+            !controller_interface::get_ordered_interfaces(
+                state_interfaces_, joint_, hardware_interface::HW_IF_VELOCITY, ordered_stt_interfaces_v) 
+            || state_interfaces_.size() != ordered_stt_interfaces_p.size() + ordered_stt_interfaces_v.size())
         {
             RCLCPP_ERROR(
             get_node()->get_logger(), "activation error");
@@ -157,17 +137,14 @@ namespace rbt_pd_cnt
         return CallbackReturn::SUCCESS;
     }
 
-    CallbackReturn Rbt_PD_cnt::on_deactivate(
-    const rclcpp_lifecycle::State & /*previous_state*/)
+    CallbackReturn Rbt_PD_cnt::on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/)
     {
     // reset command buffer
     rt_command_ptr_.reset();
     return CallbackReturn::SUCCESS;
     }
 
-    controller_interface::return_type Rbt_PD_cnt::update(
-        const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/
-    )
+    controller_interface::return_type Rbt_PD_cnt::update(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
     {
         //read joints position and velocity
         for(uint i = 0; i < jnt_stt_.position.size(); i++)
@@ -175,6 +152,7 @@ namespace rbt_pd_cnt
             
             jnt_stt_.position[i] = state_interfaces_[2*i].get_value();
             jnt_stt_.velocity[i] = state_interfaces_[2*i +1].get_value();
+            //jnt_stt_.effort[i]   = command_interfaces_[i].get_value();
             std::string pp = state_interfaces_[2*i].get_name();
             if(first_time_)
             {
@@ -224,8 +202,8 @@ namespace rbt_pd_cnt
 
             }
             jnt_cmd_.effort[i] = K_p_[i]*(jnt_cmd_.position[i] - jnt_stt_.position[i]) +
-                                 K_d_[i]*(jnt_cmd_.velocity[i] - jnt_stt_.velocity[i]) 
-                                 + jnt_cmd_.effort[i];
+                                K_d_[i]*(jnt_cmd_.velocity[i] - jnt_stt_.velocity[i]) 
+                                + jnt_cmd_.effort[i];
             command_interfaces_[i].set_value(jnt_cmd_.effort[i]);
             // RCLCPP_INFO(
             //         get_node()->get_logger(),
@@ -238,6 +216,27 @@ namespace rbt_pd_cnt
 
         }
         return controller_interface::return_type::OK;
+    }
+
+    controller_interface::InterfaceConfiguration Rbt_PD_cnt::command_interface_configuration() const
+    {
+        controller_interface::InterfaceConfiguration command_interface_config;
+        command_interface_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
+        for(const auto & joint : joint_)
+            command_interface_config.names.push_back(joint + "/" + hardware_interface::HW_IF_EFFORT);
+        return command_interface_config;
+    }
+
+    controller_interface::InterfaceConfiguration Rbt_PD_cnt::state_interface_configuration() const
+    {
+        controller_interface::InterfaceConfiguration state_interface_config;
+        state_interface_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
+        for(const auto & joint : joint_)
+        {
+            state_interface_config.names.push_back(joint + "/" + hardware_interface::HW_IF_POSITION);
+            state_interface_config.names.push_back(joint + "/" + hardware_interface::HW_IF_VELOCITY);
+        }
+        return state_interface_config;
     }
 }
 

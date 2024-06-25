@@ -1,4 +1,3 @@
-# import imp
 import os
 
 from launch                             import LaunchDescription
@@ -72,7 +71,8 @@ def generate_launch_description():
         arguments  = ['-d', rviz_config_path],
     )
 
-    return LaunchDescription([
+    # output
+    ld = LaunchDescription([
         softleg_model,
         rviz_arg,
         use_gui,
@@ -81,3 +81,5 @@ def generate_launch_description():
         robot_joint_pub_gui,
         robot_state_pub
     ])
+
+    return ld

@@ -152,7 +152,7 @@ namespace rbt_pd_cnt
             
             jnt_stt_.position[i] = state_interfaces_[2*i].get_value();
             jnt_stt_.velocity[i] = state_interfaces_[2*i +1].get_value();
-            //jnt_stt_.effort[i]   = command_interfaces_[i].get_value();
+            jnt_stt_.effort[i]   = command_interfaces_[i].get_value();
             std::string pp = state_interfaces_[2*i].get_name();
             if(first_time_)
             {

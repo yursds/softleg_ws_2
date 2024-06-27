@@ -19,7 +19,6 @@ trajectory_node:
       duration : 2.0
       wait_t   : 5.0
       pf       : [-0.25, 0.0]
-    
 
 
 fake_pd_node:
@@ -31,7 +30,40 @@ fake_pd_node:
     topic:
       joint_state : '/joint_states'
       des_traj    : '/high_rate_traj'
-      command     : "/joint_controller/command"
+      command     : '/joint_controller/command'
     
     rate: 200.0
+
+
+command_trajectory_node:
+  
+  ros__parameters:
     
+    joint_names: ['LH_HFE', 'LH_KFE']
+    
+    topic:
+      joint_state : '/joint_states'
+      command     : '/joint_controller/command'
+      feedback    : 'PD_joint_state'
+    
+    task:
+      duration : 2.0
+      wait_t   : 5.0
+      pf       : [0.0, 0.0]
+    
+    rate: 
+      command: 200.0
+      policy: 50.0
+    
+    env:
+      q_max   : [3.1415927, 3.1415927]
+      dq_max  : [15.0, 15.0]
+      ddq_max : [15.0, 15.0]
+      u_max   : [0.05, 0.005]
+    
+    controller_gain:
+      ilc:
+        le: 0.0002
+        lde: 0.0004
+        ldde: 0.0008
+  

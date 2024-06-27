@@ -5,3 +5,4 @@
 docker-enter.sh
 run.bash
 .*
+/plotjuggler_layout

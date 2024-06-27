@@ -55,7 +55,6 @@ class TrajectoryGen(Node):
         del robot
         del inv
         
-        
         # logging
         self.get_logger().info(f'\n Trajectory Node ready.')
         self.get_logger().info(f'qf {self.qf.flatten().tolist()}')

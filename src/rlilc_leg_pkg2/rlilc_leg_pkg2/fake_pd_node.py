@@ -118,7 +118,7 @@ class FakePD(Node):
         
         if all(isinstance(value, float) for value in self.pos_des.values()):
             
-            self.command_msg.position = list(self.pos_des.values())*0 + list([0.75, 0.75])
+            self.command_msg.position = list(self.pos_des.values())*0 + list([0.0, 0.0])
             self.command_msg.velocity = list(self.vel_des.values())*0
             
             self.command_msg.header.stamp = self.get_clock().now().to_msg()

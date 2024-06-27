@@ -14,8 +14,8 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
-        (os.path.join('share', package_name, 'models'), glob('models/*.pth')),
-        (os.path.join('share', package_name, 'models'), glob('models/*.yaml'))
+        (os.path.join('share', package_name, 'models'), glob('models/*/*.yaml')),
+        (os.path.join('share', package_name, 'models'), glob('models/*/*.zip'))
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -29,6 +29,7 @@ setup(
             'rlilc_controller = rlilc_leg_pkg2.rlilc_ctrl_node_sim:main',
             'trajectory_node = rlilc_leg_pkg2.trajectory_node:main',
             'fake_pd_node  =  rlilc_leg_pkg2.fake_pd_node:main',
+            'command_trajectory_node  =  rlilc_leg_pkg2.command_trajectory_node:main',
         ],
     },
 )

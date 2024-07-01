@@ -7,9 +7,10 @@ import torch
 
 from rclpy.node                         import Node
 from sensor_msgs.msg                    import JointState
+from pi3hat_moteus_int_msgs.msg         import JointsCommand, JointsStates
 from trajectory_msgs.msg                import JointTrajectoryPoint, JointTrajectory
 from std_msgs.msg                       import Bool as MSG_Bool
-
+import numpy as np
 from .GymPinTo2.robots.manipulator_RR   import Sim_RR
 from .GymPinTo2.references.classic_ref  import InvKin
 
@@ -18,7 +19,7 @@ class Homing(Node):
     
     def __init__(self):
         
-        super().__init__(node_name='homing_node')
+        super().__init__(node_name='real_homing_node')
         
         # setup node
         self._parser_parameter_node()
@@ -53,11 +54,17 @@ class Homing(Node):
         del inv
         
         # init msg to publish
-        self.command_msg      = JointState()
+        self.command_msg      = JointsCommand()
         self.uMB_msg          = JointState()
         
         self.uMB_msg.name     = self.joint_names
         self.command_msg.name = self.joint_names
+        
+        # this is what I am publishing 
+        self.joint_kp = np.array([1.0, 1.0])
+        self.joint_kd = np.array([1.0, 1.0])
+        self.command_msg.kp_scale = self.joint_kp.tolist()
+        self.command_msg.kd_scale = self.joint_kd.tolist()
         
         # initialize empty point for trajectory
         self.ref_msg             = JointTrajectory()
@@ -112,11 +119,11 @@ class Homing(Node):
         
         # quality of service, publisher and subscription
         qos = 10
-        self.command_pub  = self.create_publisher(JointState, self.topic_command, qos)
+        self.command_pub  = self.create_publisher(JointsCommand, self.topic_command, qos)
         self.uMB_pub      = self.create_publisher(JointState, 'uMB', qos)
         self.ref_pub      = self.create_publisher(JointTrajectory, 'reference', qos)
         self.bool_fl_pub  = self.create_publisher(MSG_Bool, self.topic_command_fl, qos)
-        self.state_sub    = self.create_subscription(JointState, self.topic_joint_state, self.joint_state_callback, qos)
+        self.state_sub    = self.create_subscription(JointsStates, self.topic_joint_state, self.joint_state_callback, qos)
         self.bool_fl_sub  = self.create_subscription(MSG_Bool, self.topic_command_fl, self.bool_fl_callback, qos)
 
         # set timer for command callback
@@ -160,7 +167,7 @@ class Homing(Node):
     
     # ----------------------------- SUBSCRIPTION ----------------------------- #
     
-    def joint_state_callback(self, msg:JointState):
+    def joint_state_callback(self, msg:JointsStates):
         """ Get positions, velocities, accelerations* of joints. """
         
         time = self.get_clock().now().nanoseconds / 1e9
@@ -214,7 +221,7 @@ class Homing(Node):
             # actual q
             q = torch.asarray([self.joint_pos[key] for key in self.joint_names]).view(-1,1)
             
-            if self.leader and not self.cmd_free:
+            if self.leader:
                 
                 # NOTE: Gravity Compensation
                 G_vec     = self.robot.getGravity(q=q)
@@ -282,12 +289,17 @@ class Homing(Node):
                     # NOTE: set topic command_fl to 0 to restart to publish command
                     if self.leader:
                         # enter in if loop only 1 time
+                        msg.data        = True
                         self.get_logger().info(f'Trajectory Control Finished at position qf: {self.qf.flatten().tolist()}')
                     
                     # reset the flag to reconsider new inital point and not to enter in trajectory control loop
                     self.start_traj = False
                     self.leader     = False
-                    msg.data        = True
+                    
+                    # NOTE: PD command
+                    self.command_msg.position = self.qf.flatten().tolist()
+                    # reference
+                    msg_traj.positions = self.qf.flatten().tolist()
                     
                 else:
                     self.get_logger().fatal('THIS OPTION IS NOT POSSIBLE')

@@ -8,6 +8,7 @@ import numpy as np
 
 from rclpy.node                         import Node
 from sensor_msgs.msg                    import JointState
+from pi3hat_moteus_int_msgs.msg         import JointsCommand, JointsStates
 from trajectory_msgs.msg                import JointTrajectoryPoint, JointTrajectory
 from std_msgs.msg                       import Bool as MSG_Bool
 
@@ -21,7 +22,7 @@ class Command_Generator(Node):
     
     def __init__(self):
         
-        super().__init__(node_name='command_rlilc_node')
+        super().__init__(node_name='real_command_rlilc_node')
         
         # setup node
         self._parser_parameter_node()
@@ -77,7 +78,7 @@ class Command_Generator(Node):
         del inv
         
         # init msg to publish
-        self.command_msg      = JointState()
+        self.command_msg      = JointsCommand()
         self.uRL_msg          = JointState()
         self.uMB_msg          = JointState()
         self.uILC_msg         = JointState()
@@ -86,8 +87,14 @@ class Command_Generator(Node):
         self.uILC_msg.name    = self.joint_names
         self.command_msg.name = self.joint_names
         
+        # this is what I am publishing 
+        self.joint_kp = np.array([1.0, 1.0])
+        self.joint_kd = np.array([1.0, 1.0])
+        self.command_msg.kp_scale = self.joint_kp.tolist()
+        self.command_msg.kd_scale = self.joint_kd.tolist()
+        
         # initialize empty point for trajectory
-        self.ref_msg = JointTrajectory()
+        self.ref_msg          = JointTrajectory()
         self.ref_msg.joint_names = self.joint_names
         self.ref_msg.points.append(JointTrajectoryPoint()) 
         
@@ -101,21 +108,17 @@ class Command_Generator(Node):
         
         # Declare default values
         self.declare_parameter('joint_names', ['softleg_1_hip_joint','softleg_1_knee_joint'])
-        
         self.declare_parameter('topic.joint_state', '/state_broadcaster/joint_states')
         self.declare_parameter('topic.command', '/command')
         self.declare_parameter('topic.feedback', 'PD_joint_state')
         self.declare_parameter('topic.command_fl', 'command_bool')
-        
         self.declare_parameter('task.duration', 1.0)
         self.declare_parameter('task.wait_t', 5.0)
         self.declare_parameter('task.post_wait_t', 1.0)
         self.declare_parameter('task.pf', [0.0, 0.0])
-        
+        self.declare_parameter('model_rl_path', abs_path+'/../models/rl_ilc/best_model.zip')
         self.declare_parameter('rate.command', 200.0)
         self.declare_parameter('rate.policy', 50.0)
-        
-        self.declare_parameter('model_rl_path', abs_path+'/../models/rl_ilc/best_model.zip')
         self.declare_parameter('urdf_path', abs_path+'/GymPinTo2/robots/robot_models/softleg_urdf/urdf/softleg-rlilc_no_mesh.urdf')
         
         # Get values (from Node(parameters={})) and set as attributes
@@ -161,14 +164,14 @@ class Command_Generator(Node):
         
         # quality of service, publisher and subscription
         qos = 10
-        self.command_pub  = self.create_publisher(JointState, self.topic_command, qos)
+        self.command_pub  = self.create_publisher(JointsCommand, self.topic_command, qos)
         self.uRL_pub      = self.create_publisher(JointState, 'uRL', qos)
         self.uMB_pub      = self.create_publisher(JointState, 'uMB', qos)
         self.uILC_pub     = self.create_publisher(JointState, 'uILC', qos)
         self.bool_fl_pub  = self.create_publisher(MSG_Bool, self.topic_command_fl, qos)
         self.ref_pub      = self.create_publisher(JointTrajectory, 'reference', qos)
-        self.state_sub    = self.create_subscription(JointState, self.topic_joint_state, self.joint_state_callback, qos)
-        self.feedback_sub = self.create_subscription(JointState, self.topic_feedback, self.feedback_callback, qos)
+        self.state_sub    = self.create_subscription(JointsStates, self.topic_joint_state, self.joint_state_callback, qos)
+        self.feedback_sub = self.create_subscription(JointsStates, self.topic_feedback, self.feedback_callback, qos)
         self.bool_fl_sub  = self.create_subscription(MSG_Bool, self.topic_command_fl, self.bool_fl_callback, qos)
         
         # set timer for command callback
@@ -219,12 +222,8 @@ class Command_Generator(Node):
             self.get_logger().info(f'Ho iniziato un episodiooooo!!!')
             self.ilc_ctrl.stepILC()
         
-        self.uILC     = torch.zeros(self.njoint,1)
-        self.uRL      = torch.zeros(self.njoint,1)
-        self.uRL_old  = torch.zeros(self.njoint,1)
-        self.uILC_old = torch.zeros(self.njoint,1)
-        self.duILC    = torch.zeros(self.njoint,1)
-        self.duRL     = torch.zeros(self.njoint,1)
+        self.uRL_old        = torch.zeros(self.njoint,1)
+        self.uILC_old       = torch.zeros(self.njoint,1)
     
     def _step_rlilc(self, delta_t:float):
         
@@ -302,7 +301,7 @@ class Command_Generator(Node):
 
     # ----------------------------- SUBSCRIPTION ----------------------------- #
     
-    def joint_state_callback(self, msg:JointState):
+    def joint_state_callback(self, msg:JointsStates):
         """ Get positions, velocities, accelerations* of joints. """
         
         time = self.get_clock().now().nanoseconds / 1e9
@@ -344,7 +343,7 @@ class Command_Generator(Node):
         else:
             self.leader = False
         
-    def feedback_callback(self, msg:JointState):
+    def feedback_callback(self, msg:JointsStates):
         """ Get effort commanded to joints. """
         
         u_tmp = {}
@@ -384,7 +383,7 @@ class Command_Generator(Node):
             # actual q
             q = torch.asarray([self.joint_pos[key] for key in self.joint_names]).view(-1,1)
             
-            if self.leader and self.cmd_free:
+            if self.leader:
                 
                 # NOTE: Gravity Compensation
                 G_vec               = self.robot.getGravity(q=q)
@@ -461,6 +460,7 @@ class Command_Generator(Node):
                     # NOTE: set topic command_fl to 1 to restart to publish command
                     if self.leader:
                         # enter in if loop only 1 time
+                        msg.data             = False
                         self.get_logger().info(f'Trajectory Control Finished at position qf: {q.flatten().tolist()}')
                         # prepare to new ep of ILC, compute forward control
                         self._new_ep()
@@ -468,11 +468,10 @@ class Command_Generator(Node):
                     # reset the flag to reconsider new inital point and not to enter in trajectory control loop
                     self.start_traj = False
                     self.leader     = False
-                    msg.data        = False
                 
                 else:
                     self.get_logger().fatal('THIS OPTION IS NOT POSSIBLE')
-                    
+                
                 # update msg data
                 self.uRL_msg.effort  = uRL_interp.flatten().tolist()
                 self.uILC_msg.effort = self.uILC.flatten().tolist()
@@ -519,6 +518,7 @@ class Command_Generator(Node):
             self.duILC = self._resample_u(u_old=self.uILC_old, u_new=self.uILC, num_step = self.scaling)
             self.duRL  = self._resample_u(u_old=self.uRL_old, u_new=self.uRL, num_step = self.scaling)
     
+
     # ------------------------------------------------------------------------- #
     # TODO: move to a class or utils folder
     def _build_spec(self):

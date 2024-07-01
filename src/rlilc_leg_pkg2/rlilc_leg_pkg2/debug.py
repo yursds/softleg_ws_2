@@ -384,7 +384,7 @@ class Command_Generator(Node):
             # actual q
             q = torch.asarray([self.joint_pos[key] for key in self.joint_names]).view(-1,1)
             
-            if self.leader and self.cmd_free:
+            if self.leader:
                 
                 # NOTE: Gravity Compensation
                 G_vec               = self.robot.getGravity(q=q)

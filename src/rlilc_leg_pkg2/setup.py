@@ -29,7 +29,8 @@ setup(
             'rlilc_controller = rlilc_leg_pkg2.rlilc_ctrl_node_sim:main',
             'trajectory_node = rlilc_leg_pkg2.trajectory_node:main',
             'fake_pd_node  =  rlilc_leg_pkg2.fake_pd_node:main',
-            'command_trajectory_node  =  rlilc_leg_pkg2.command_trajectory_node:main',
+            'command_rlilc_node  =  rlilc_leg_pkg2.command_rlilc_node:main',
+            'homing_node  =  rlilc_leg_pkg2.homing_node:main',
         ],
     },
 )

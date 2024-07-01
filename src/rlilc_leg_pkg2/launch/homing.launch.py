@@ -13,38 +13,35 @@ from launch_ros.actions             import Node
 
 from ament_index_python.packages    import get_package_share_directory
 
-
 def generate_launch_description():
+    
+    urdf_file                   = 'leg_constrained.urdf'
+    description_pkg_path        = get_package_share_directory('mulinex_description')
+    softleg_description_path    = os.path.join(description_pkg_path, 'urdf', urdf_file)
     
     # setup variables path
     folder_ctrl_param = 'config' # contain simulation flag
-    folder_model_rl   = 'models'
-    inference_config  = 'rlilc_ctrl_config_sim.yaml'
-    RL_param_file     = 'config_minimal.yaml'
-    RL_pth_file       = 'SoftlegJump040_target13.pth'
-    path_pkg          = get_package_share_directory('rlilc_leg_pkg')
+    traj_config       = 'rlilc_leg_config.yaml'
+    path_pkg          = get_package_share_directory('rlilc_leg_pkg2')
     
     # definition of controller parameters, modelRL_path, configRL_path
-    ctrl_params    = os.path.join(path_pkg, folder_ctrl_param, inference_config)
-    configRL_path  = os.path.join(path_pkg, folder_model_rl, RL_param_file)
-    weightsRL_path = os.path.join(path_pkg, folder_model_rl, RL_pth_file)
-    joint_names    = ['softleg_1_hip_joint', 'softleg_1_knee_joint']
+    ctrl_params    = os.path.join(path_pkg, folder_ctrl_param, traj_config)
     
     # node rlilc_controller
-    node = Node(
-        package    = 'rlilc_leg_pkg',
-        name       = 'rlilc_controller',        # the name is set in the main of inference_ctrl_node_sim
-        executable = 'rlilc_controller',    # the name of executable is set in setup.py
+    homing = Node(
+        package    = 'rlilc_leg_pkg2',
+        name       = 'homing_node',        # the name is set in the main of inference_ctrl_node_sim
+        executable = 'homing_node',    # the name of executable is set in setup.py
         parameters = [
+            {'urdf_path': softleg_description_path},
             ctrl_params,
-            {'config_path': configRL_path},
-            {'model_path': weightsRL_path},
-            {'joint_names': joint_names},
             ],
         output     = "screen"
     )
     
     # output
-    ld = LaunchDescription([node,])
+    ld = LaunchDescription([
+        homing,
+    ])
     
     return ld

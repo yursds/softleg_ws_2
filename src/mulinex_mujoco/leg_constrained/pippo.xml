@@ -1,0 +1,62 @@
+<mujoco model="leg_constrained">
+  <compiler angle="radian" meshdir="assets/"/>
+  <option integrator="implicitfast"/>
+  <asset>
+    <mesh name="cart" file="cart.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="old_Module_left_hind" file="old_Module_left_hind.stl"/>
+    <mesh name="old_Lower_leg_left" file="old_Lower_leg_left.stl"/>
+    <mesh name="Lower_leg_left" file="Lower_leg_left.stl"/>
+  </asset>
+  
+  <default class="leg_constrained">
+    <material specular="0.5" shininess="0.25"/>
+    <joint axis="0 0 1"/>
+    <general gaintype="fixed" biastype="affine" gainprm="2000" biasprm="0 -2000 -200"/>
+    <default class="joint1">
+      <joint range="-2.96706 2.96706"/>
+      <general ctrlrange="-2.96706 2.96706"/>
+      <default class="joint2">
+        <joint range="-2.0944 2.0944"/>
+        <general ctrlrange="-2.0944 2.0944"/>
+      </default>
+    </default>
+    <default class="joint3">
+      <joint range="-3.05433 3.05433"/>
+      <general ctrlrange="-3.05433 3.05433"/>
+    </default>
+    <default class="visual">
+      <geom type="mesh" contype="0" conaffinity="0" group="2" material="gray"/>
+    </default>
+    <default class="collision">
+      <geom group="3"/>
+    </default>
+
+<!--   <default>
+      <site size="0.001" rgba="1 0 0 1" group="4"/>
+    </default> -->
+  </default>
+  <worldbody>
+    <body name="base_link">
+      <inertial pos="0 0 0" mass="0.0001" diaginertia="1e-05 1e-05 1e-05"/>
+      <geom quat="3.26795e-07 0 0 -1" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="cart"/>
+      <body name="LH_SHOULDER" pos="0.025 0.05 0.5" quat="2.31079e-07 -0.707107 0.707107 2.31079e-07">
+        <inertial pos="-0.0724874 0.0315826 0.00248124" quat="0.546772 0.454856 0.541001 0.448848" mass="0.476697" diaginertia="0.00306152 0.00305004 0.000215348"/>
+        <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="old_Module_left_hind"/>
+        <geom size="0.1345 0.0285 0.03" pos="-0.0945 0 0" type="box" rgba="1 1 1 1"/>
+        <body name="LH_UPPER_LEG" pos="-0.19 0.044 0">
+          <inertial pos="-0.0724874 0.0315826 0.00248124" quat="0.546772 0.454856 0.541001 0.448848" mass="0.476697" diaginertia="0.00306152 0.00305004 0.000215348"/>
+          <joint name="LH_HFE" pos="0 0 0" axis="0 1 0" range="-3.14159 3.14159" actuatorfrcrange="-5 5"/>
+          <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="old_Module_left_hind"/>
+          <geom size="0.1345 0.0285 0.03" pos="-0.0945 0.015 0" type="box" rgba="1 1 1 1"/>
+          <body name="LH_LOWER_LEG" pos="-0.19 0.044 0">
+            <inertial pos="-0.0660893 0.0198901 1.55259e-05" quat="0.487419 0.486067 0.513613 0.512215" mass="0.046942" diaginertia="0.000213 0.000211548 4.57013e-06"/>
+            <joint name="LH_KFE" pos="0 0 0" axis="0 1 0" range="-3.14159 3.14159" actuatorfrcrange="-5 5"/>
+            <geom quat="0.707107 0 0.707107 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="old_Lower_leg_left"/>
+            <geom name="LH_LOWER_LEG" quat="0.707107 0 0.707107 0" type="mesh" rgba="1 1 1 1" mesh="Lower_leg_left"/>
+            <body name="LH_FOOT" pos="-0.19 0.028 0"/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>

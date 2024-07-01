@@ -1,41 +1,41 @@
 # # config.yaml
 
-trajectory_node:
+# trajectory_node:
   
-  ros__parameters:
+#   ros__parameters:
     
-    joint_names : ['LH_HFE', 'LH_KFE']
+#     joint_names : ['LH_HFE', 'LH_KFE']
     
-    topic :
-      joint_state    : '/joint_states'
-      high_rate_traj : '/high_rate_traj'
-      low_rate_traj  : '/low_rate_traj'
+#     topic :
+#       joint_state    : '/joint_states'
+#       high_rate_traj : '/high_rate_traj'
+#       low_rate_traj  : '/low_rate_traj'
     
-    rate :
-      high_rate : 200.0
-      low_rate  : 50.0
+#     rate :
+#       high_rate : 200.0
+#       low_rate  : 50.0
 
-    task :
-      duration : 2.0
-      wait_t   : 5.0
-      pf       : [-0.25, 0.0]
+#     task :
+#       duration : 2.0
+#       wait_t   : 5.0
+#       pf       : [-0.25, 0.0]
 
 
-fake_pd_node:
+# fake_pd_node:
   
-  ros__parameters:
+#   ros__parameters:
     
-    joint_names: ['LH_HFE', 'LH_KFE']
+#     joint_names: ['LH_HFE', 'LH_KFE']
     
-    topic:
-      joint_state : '/joint_states'
-      des_traj    : '/high_rate_traj'
-      command     : '/joint_controller/command'
+#     topic:
+#       joint_state : '/joint_states'
+#       des_traj    : '/high_rate_traj'
+#       command     : '/joint_controller/command'
     
-    rate: 200.0
+#     rate: 200.0
 
 
-command_trajectory_node:
+command_rlilc_node:
   
   ros__parameters:
     
@@ -45,11 +45,13 @@ command_trajectory_node:
       joint_state : '/joint_states'
       command     : '/joint_controller/command'
       feedback    : 'PD_joint_state'
+      command_fl  : 'command_bool'
     
     task:
-      duration : 2.0
-      wait_t   : 5.0
-      pf       : [0.0, 0.0]
+      duration : 10.0
+      wait_t   : 1.0
+      post_wait_t : 1.0
+      pf       : [-0.25, 0.15]
     
     rate: 
       command: 200.0
@@ -67,3 +69,23 @@ command_trajectory_node:
         lde: 0.0004
         ldde: 0.0008
   
+
+homing_node:
+  
+  ros__parameters:
+    
+    joint_names: ['LH_HFE', 'LH_KFE']
+    
+    topic:
+      joint_state : '/joint_states'
+      command     : '/joint_controller/command'
+    
+    task:
+      duration    : 10.0
+      wait_t      : 1.0
+      post_wait_t : 1.0
+      pf          : [0.0, 0.0]
+    
+    rate: 
+      command: 200.0
+    

@@ -15,6 +15,7 @@ from ament_index_python.packages    import get_package_share_directory
 from launch.actions                 import ExecuteProcess
 from launch.substitutions           import LaunchConfiguration
 
+
 def generate_launch_description():
     
     urdf_file                   = 'leg_constrained.urdf'
@@ -53,8 +54,8 @@ def generate_launch_description():
     # node rlilc_controller
     command = Node(
         package    = 'rlilc_leg_pkg2',
-        name       = 'command_rlilc_node',        # the name is set in the main of inference_ctrl_node_sim
-        executable = 'command_rlilc_node',    # the name of executable is set in setup.py
+        name       = 'real_command_rlilc_node',        # the name is set in the main of inference_ctrl_node_sim
+        executable = 'real_command_rlilc_node',    # the name of executable is set in setup.py
         parameters = [
             {'urdf_path': softleg_description_path},
             ctrl_params,
@@ -65,8 +66,8 @@ def generate_launch_description():
     # node homing
     homing = Node(
         package    = 'rlilc_leg_pkg2',
-        name       = 'homing_node',        # the name is set in the main of inference_ctrl_node_sim
-        executable = 'homing_node',    # the name of executable is set in setup.py
+        name       = 'real_homing_node',        # the name is set in the main of inference_ctrl_node_sim
+        executable = 'real_homing_node',    # the name of executable is set in setup.py
         parameters = [
             {'urdf_path': softleg_description_path},
             ctrl_params,

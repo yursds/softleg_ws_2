@@ -9,7 +9,7 @@ import numpy as np
 from rclpy.node                         import Node
 from sensor_msgs.msg                    import JointState
 from trajectory_msgs.msg                import JointTrajectoryPoint, JointTrajectory
-from std_msgs.msg                       import Bool as MSG_Bool
+from std_msgs.msg                       import Int8 as MSG_int
 
 from .utils.sb3_utils                   import build_sb3_rl_model, run_inference
 from .GymPinTo2.robots.manipulator_RR   import Sim_RR
@@ -43,18 +43,23 @@ class Command_Generator(Node):
         self.get_first_state = False
         
         # flag for command
-        self.cmd_free        = False
+        self.command_id      = None
         self.leader          = False
+        self.once            = False
+        
+        # id for command id
+        self.my_id = 2
         
         # init_observation
-        samples             = int(self.duration*self.rate_policy)
+        samples             = int(self.duration*self.rate_policy) + 1
         self.scaling        = int(self.rate / self.rate_policy)
         self.uRL            = torch.zeros(self.njoint,1)
         self.uILC           = torch.zeros(self.njoint,1)
         self.uMB            = torch.zeros(self.njoint,1)
         
-        self.uRL_old_ep_ts  = torch.zeros(self.njoint, samples)
-        self.uILC_old_ep_ts = torch.zeros(self.njoint, samples)
+        self.mem_count      = 0
+        self.uRL_old_ep_ts  = torch.zeros(self.njoint, 1, samples)
+        self.uILC_old_ep_ts = torch.zeros(self.njoint, 1, samples)
         self.uRL_old        = torch.zeros(self.njoint,1)
         self.uILC_old       = torch.zeros(self.njoint,1)
         
@@ -79,11 +84,15 @@ class Command_Generator(Node):
         # init msg to publish
         self.command_msg      = JointState()
         self.uRL_msg          = JointState()
-        self.uMB_msg          = JointState()
         self.uILC_msg         = JointState()
+        self.uRL_fut_msg      = JointState()
+        self.uILC_fut_msg     = JointState()
+        self.uMB_msg          = JointState()
         self.uRL_msg.name     = self.joint_names
-        self.uMB_msg.name     = self.joint_names
         self.uILC_msg.name    = self.joint_names
+        self.uRL_fut_msg.name = self.joint_names
+        self.uILC_fut_msg.name= self.joint_names
+        self.uMB_msg.name     = self.joint_names
         self.command_msg.name = self.joint_names
         
         # initialize empty point for trajectory
@@ -104,8 +113,8 @@ class Command_Generator(Node):
         
         self.declare_parameter('topic.joint_state', '/state_broadcaster/joint_states')
         self.declare_parameter('topic.command', '/command')
-        self.declare_parameter('topic.feedback', 'PD_joint_state')
-        self.declare_parameter('topic.command_fl', 'command_bool')
+        self.declare_parameter('topic.feedback', '/PD_joint_state')
+        self.declare_parameter('topic.command_id', '/command_id')
         
         self.declare_parameter('task.duration', 1.0)
         self.declare_parameter('task.wait_t', 5.0)
@@ -123,7 +132,7 @@ class Command_Generator(Node):
         self.topic_joint_state = self.get_parameter('topic.joint_state').get_parameter_value().string_value
         self.topic_command     = self.get_parameter('topic.command').get_parameter_value().string_value
         self.topic_feedback    = self.get_parameter('topic.feedback').get_parameter_value().string_value
-        self.topic_command_fl  = self.get_parameter('topic.command_fl').get_parameter_value().string_value
+        self.topic_command_id  = self.get_parameter('topic.command_id').get_parameter_value().string_value
         self.duration          = self.get_parameter('task.duration').get_parameter_value().double_value
         self.wait_t            = self.get_parameter('task.wait_t').get_parameter_value().double_value
         self.post_wait_t       = self.get_parameter('task.post_wait_t').get_parameter_value().double_value
@@ -163,13 +172,14 @@ class Command_Generator(Node):
         qos = 10
         self.command_pub  = self.create_publisher(JointState, self.topic_command, qos)
         self.uRL_pub      = self.create_publisher(JointState, 'uRL', qos)
-        self.uMB_pub      = self.create_publisher(JointState, 'uMB', qos)
         self.uILC_pub     = self.create_publisher(JointState, 'uILC', qos)
-        self.bool_fl_pub  = self.create_publisher(MSG_Bool, self.topic_command_fl, qos)
+        self.uRL_fut_pub  = self.create_publisher(JointState, 'uRL_fut', qos)
+        self.uILC_fut_pub = self.create_publisher(JointState, 'uILC_fut', qos)
+        self.uMB_pub      = self.create_publisher(JointState, 'uMB', qos)
         self.ref_pub      = self.create_publisher(JointTrajectory, 'reference', qos)
         self.state_sub    = self.create_subscription(JointState, self.topic_joint_state, self.joint_state_callback, qos)
         self.feedback_sub = self.create_subscription(JointState, self.topic_feedback, self.feedback_callback, qos)
-        self.bool_fl_sub  = self.create_subscription(MSG_Bool, self.topic_command_fl, self.bool_fl_callback, qos)
+        self.bool_fl_sub  = self.create_subscription(MSG_int, self.topic_command_id, self.bool_fl_callback, qos)
         
         # set timer for command callback
         self.timer_command = self.create_timer(1.0 / self.rate, self.command_callback)
@@ -225,6 +235,8 @@ class Command_Generator(Node):
         self.uILC_old = torch.zeros(self.njoint,1)
         self.duILC    = torch.zeros(self.njoint,1)
         self.duRL     = torch.zeros(self.njoint,1)
+
+        self.mem_count = 0
     
     def _step_rlilc(self, delta_t:float):
         
@@ -262,7 +274,11 @@ class Command_Generator(Node):
         if self.ilc_ctrl.episodes != 0:
             M    = self.robot.getMass(q=q)
             uilc = self.ilc_ctrl.getControl()
-            self.uILC = torch.matmul(M,uilc)
+            
+            if uilc.numel() != 0: 
+                self.uILC = torch.matmul(M,uilc)
+            else:
+                self.uILC = self.uILC_old
         
         # ================================================================================== #
         
@@ -270,17 +286,27 @@ class Command_Generator(Node):
         # future ref
         delta_t_fut = delta_t + 1/self.rate_policy  # prediction
         if delta_t_fut < self.duration:
+            
             r_f, dr_f, ddr_f = self._minsnap(qi = self.qi, qf = self.qf, duration = self.duration, t = delta_t_fut)
+            
+            idx = self.mem_count
+            url_old_ep = self.uRL_old_ep_ts[:, :, idx]
+            uilc_old_ep = self.uILC_old_ep_ts[:, :, idx]
             
             obs_list  = torch.cat([
                 q.flatten(), dq.flatten(), ddq.flatten(), \
                 r_f.flatten(), dr_f.flatten(), ddr_f.flatten(), \
-                self.uRL.flatten(), self.uRL.flatten()*0, self.uRL.flatten()*0], dim=0)
+                self.uRL.flatten(), url_old_ep.flatten(), uilc_old_ep.flatten()], dim=0)
             
             obs_list = self.normalize_obs(obs_list)
             obs_list = torch.clip(obs_list, max = self._highLimO, min = self._lowLimO)         
             action = run_inference(self.rl_model, obs_list)
             self.uRL = self.rescale_action(action)
+            
+            self.uRL_old_ep_ts[:, :, idx] = self.uRL.clone()
+            self.uILC_old_ep_ts[:, :, idx] = self.uILC.clone()
+            
+            self.mem_count += 1
         
         # ================================================================================== #
     
@@ -327,7 +353,6 @@ class Command_Generator(Node):
                     # save startup time and set zero acceleration
                     if restart_fl:
                         self.get_first_state        = True
-                        self.startup_time           = time
                     else:
                         # brutal derivative computation for acceleration
                         delta_t = time - self._time_old
@@ -337,13 +362,7 @@ class Command_Generator(Node):
         # update variables
         self._joint_vel_old = self.joint_vel.copy()
         self._time_old      = time
-        
-        # check if command topic is free
-        if self.cmd_free:
-            self.leader = True
-        else:
-            self.leader = False
-        
+    
     def feedback_callback(self, msg:JointState):
         """ Get effort commanded to joints. """
         
@@ -360,10 +379,19 @@ class Command_Generator(Node):
         
         self.uTot_old = torch.asarray([u_tmp[key] for key in self.joint_names]).view(-1,1)
     
-    def bool_fl_callback(self, msg:MSG_Bool):
+    def bool_fl_callback(self, msg:MSG_int):
         """ Get state of command topic (True if free, False if occupied). """
         
-        self.cmd_free = msg.data
+        self.command_id = msg.data
+        
+        # check if command topic is free
+        if self.command_id == self.my_id:
+            self.leader = True
+        else:
+            self.leader = False
+            # reset the flag to reconsider new inital point and not to enter in trajectory control loop
+            self.start_traj = False
+            self.mem_count = 0
     
     # ------------------------------- PUBLISHER ------------------------------ #
     
@@ -374,38 +402,40 @@ class Command_Generator(Node):
         uRL_interp  = torch.zeros(self.njoint,1)
         uILC_interp = torch.zeros(self.njoint,1)
         
-        msg                    = MSG_Bool()
-        msg_traj               = JointTrajectoryPoint()
-        msg_traj.velocities    = torch.zeros(self.njoint).tolist()
-        msg_traj.accelerations = torch.zeros(self.njoint).tolist()
+        self.uRL_msg.effort  = torch.zeros(self.njoint,1).flatten().tolist()
+        self.uILC_msg.effort = torch.zeros(self.njoint,1).flatten().tolist()
         
         if self.get_first_state:
             
             # actual q
             q = torch.asarray([self.joint_pos[key] for key in self.joint_names]).view(-1,1)
             
-            if self.leader and self.cmd_free:
+            msg_traj               = JointTrajectoryPoint()
+            msg_traj.velocities    = torch.zeros(self.njoint).tolist()
+            msg_traj.accelerations = torch.zeros(self.njoint).tolist()
+            
+            # NOTE: Gravity Compensation
+            G_vec               = self.robot.getGravity(q=q)*1
+            self.uMB            = G_vec.clone()
+            self.uMB_msg.effort = self.uMB.flatten().tolist()
+        
+            # standard command -> only gravity compensation
+            command   = G_vec.flatten().tolist()
+            
+            if self.leader:
                 
-                # NOTE: Gravity Compensation
-                G_vec               = self.robot.getGravity(q=q)
-                self.uMB            = G_vec.clone()
-                self.uMB_msg.effort = self.uMB.flatten().tolist()
-                
-                # standard command -> only gravity compensation
-                command   = G_vec.flatten().tolist()
+                # save initial joint position
+                if not self.start_traj:
+                    
+                    self.startup_time = time.nanoseconds / 1e9
+                    self.qi           = self._angle_normalize(q).clone()
+                    self.start_traj   = True
+                    self.once         = False
+                    self.get_logger().info(f'Start trajectory from position qi: {self.qi.flatten().tolist()}')
                 
                 # get actual time and delta_t for trajectory
                 current_t = time.nanoseconds / 1e9
                 delta_t   = current_t - self.startup_time - self.wait_t
-                
-                # send that this node occupied command topic (cmd.free is set 1)
-                msg.data = True
-                
-                # save initial joint position
-                if not self.start_traj:
-                    self.qi         = self._angle_normalize(q).clone()
-                    self.start_traj = True
-                    self.get_logger().info(f'Start trajectory from position qi: {self.qi.flatten().tolist()}')
                 
                 # mantain initial position
                 if delta_t < 0.0:
@@ -422,7 +452,7 @@ class Command_Generator(Node):
                     r_, dr_, ddr_ = self._minsnap(qi = self.qi, qf = self.qf, duration = self.duration, t = delta_t)
                     
                     # update interpolation of law rate commands
-                    uRL_interp    = (self.uRL_old + self.duRL).clone()
+                    uRL_interp    = (self.uRL_old + self.duRL).clone()*0
                     uILC_interp   = (self.uILC_old + self.duILC).clone()
                     self.uRL_old  = uRL_interp.clone()
                     self.uILC_old = uILC_interp.clone()
@@ -445,7 +475,6 @@ class Command_Generator(Node):
                     
                     # NOTE: PD command
                     self.command_msg.position = self.qf.flatten().tolist()
-                    self.command_msg.velocity = torch.zeros(self.njoint).tolist()
                     # reference
                     msg_traj.positions = self.qf.flatten().tolist()
                 
@@ -457,46 +486,39 @@ class Command_Generator(Node):
                     # reference
                     msg_traj.positions = self.qf.flatten().tolist()
                     
-                    # set command flag to 0, this node stops to publish command
-                    # NOTE: set topic command_fl to 1 to restart to publish command
-                    if self.leader:
+                    if not self.once:
                         # enter in if loop only 1 time
                         self.get_logger().info(f'Trajectory Control Finished at position qf: {q.flatten().tolist()}')
                         # prepare to new ep of ILC, compute forward control
                         self._new_ep()
-                    
-                    # reset the flag to reconsider new inital point and not to enter in trajectory control loop
-                    self.start_traj = False
-                    self.leader     = False
-                    msg.data        = False
+                        self.once = True
                 
                 else:
                     self.get_logger().fatal('THIS OPTION IS NOT POSSIBLE')
-                    
+                
                 # update msg data
                 self.uRL_msg.effort  = uRL_interp.flatten().tolist()
-                self.uILC_msg.effort = self.uILC.flatten().tolist()
+                self.uILC_msg.effort = uILC_interp.flatten().tolist()
                 
                 # reference topic
-                self.ref_msg.points[0] = msg_traj
+                self.ref_msg.points[0]    = msg_traj
                 self.ref_msg.header.stamp = time.to_msg()
                 self.ref_pub.publish(self.ref_msg)
+                
+                # real command
+                self.command_msg.effort       = command
+                self.command_msg.header.stamp = time.to_msg()
+                self.command_pub.publish(self.command_msg)
                 
                 # debug topic
                 self.uMB_msg.header.stamp  = time.to_msg()
                 self.uMB_pub.publish(self.uMB_msg)
-                
-                self.uILC_msg.header.stamp = time.to_msg()
-                self.uILC_pub.publish(self.uILC_msg)
-                
-                self.uRL_msg.header.stamp  = time.to_msg()
-                self.uRL_pub.publish(self.uRL_msg)
-                
-                # real command
-                self.bool_fl_pub.publish(msg)
-                self.command_msg.effort       = command
-                self.command_msg.header.stamp = time.to_msg()
-                self.command_pub.publish(self.command_msg)
+            
+            self.uILC_msg.header.stamp = time.to_msg()
+            self.uILC_pub.publish(self.uILC_msg)
+            
+            self.uRL_msg.header.stamp  = time.to_msg()
+            self.uRL_pub.publish(self.uRL_msg)
     
     def rlilc_callback(self):
         
@@ -512,13 +534,23 @@ class Command_Generator(Node):
             current_t   = time.nanoseconds / 1e9
             delta_t     = current_t - self.startup_time - self.wait_t
             
-            if delta_t < self.duration and delta_t >= 0.0:
+            if delta_t >= 0.0 and delta_t < self.duration:
                 
                 self._step_rlilc(delta_t=delta_t)
             
             self.duILC = self._resample_u(u_old=self.uILC_old, u_new=self.uILC, num_step = self.scaling)
             self.duRL  = self._resample_u(u_old=self.uRL_old, u_new=self.uRL, num_step = self.scaling)
-    
+        
+        # update msg data
+        self.uRL_fut_msg.effort  = self.uRL.flatten().tolist()
+        self.uILC_fut_msg.effort = self.uILC.flatten().tolist()
+        
+        self.uILC_fut_msg.header.stamp = time.to_msg()
+        self.uILC_fut_pub.publish(self.uILC_fut_msg)
+        
+        self.uRL_fut_msg.header.stamp  = time.to_msg()
+        self.uRL_fut_pub.publish(self.uRL_fut_msg)
+        
     # ------------------------------------------------------------------------- #
     # TODO: move to a class or utils folder
     def _build_spec(self):

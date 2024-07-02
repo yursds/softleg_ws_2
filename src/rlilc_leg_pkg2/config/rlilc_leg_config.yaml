@@ -1,39 +1,5 @@
-# # config.yaml
-
-# trajectory_node:
-  
-#   ros__parameters:
-    
-#     joint_names : ['LH_HFE', 'LH_KFE']
-    
-#     topic :
-#       joint_state    : '/joint_states'
-#       high_rate_traj : '/high_rate_traj'
-#       low_rate_traj  : '/low_rate_traj'
-    
-#     rate :
-#       high_rate : 200.0
-#       low_rate  : 50.0
-
-#     task :
-#       duration : 2.0
-#       wait_t   : 5.0
-#       pf       : [-0.25, 0.0]
-
-
-# fake_pd_node:
-  
-#   ros__parameters:
-    
-#     joint_names: ['LH_HFE', 'LH_KFE']
-    
-#     topic:
-#       joint_state : '/joint_states'
-#       des_traj    : '/high_rate_traj'
-#       command     : '/joint_controller/command'
-    
-#     rate: 200.0
-
+# parameters of node
+# NOTE: some nodes need robot urdf path and rl_model_path, set them on launch file
 
 command_rlilc_node:
   
@@ -44,14 +10,14 @@ command_rlilc_node:
     topic:
       joint_state : '/joint_states'
       command     : '/joint_controller/command'
-      feedback    : 'PD_joint_state'
-      command_fl  : 'command_bool'
+      feedback    : '/PD_joint_state'
+      command_id  : '/command_id'
     
     task:
-      duration : 10.0
-      wait_t   : 1.0
+      duration    : 5.0   # NOTE consider to modify id_selector_node parameter
+      wait_t      : 1.0
       post_wait_t : 1.0
-      pf       : [-0.25, 0.15]
+      pf          : [-0.15, 0.15]
     
     rate: 
       command: 200.0
@@ -79,13 +45,24 @@ homing_node:
     topic:
       joint_state : '/joint_states'
       command     : '/joint_controller/command'
+      command_id  : '/command_id'
     
     task:
-      duration    : 10.0
+      duration    : 5.0     # NOTE consider to modify id_selector_node parameter
       wait_t      : 1.0
       post_wait_t : 1.0
       pf          : [0.0, 0.0]
     
     rate: 
       command: 200.0
-    
+
+id_selector_node:
+
+  topic:
+    command_id: '/command_id'
+  
+    task:
+      duration_homing : 10.0 # NOTE consider to modify command_rlilc_node parameter
+      duration_rlilc  : 10.0 # NOTE consider to modify homing_node parameter
+  
+  rate : 200.0

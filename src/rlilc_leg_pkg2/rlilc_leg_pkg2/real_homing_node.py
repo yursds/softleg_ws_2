@@ -9,7 +9,7 @@ from rclpy.node                         import Node
 from sensor_msgs.msg                    import JointState
 from pi3hat_moteus_int_msgs.msg         import JointsCommand, JointsStates
 from trajectory_msgs.msg                import JointTrajectoryPoint, JointTrajectory
-from std_msgs.msg                       import Bool as MSG_Bool
+from std_msgs.msg                       import Int8 as MSG_int
 import numpy as np
 from .GymPinTo2.robots.manipulator_RR   import Sim_RR
 from .GymPinTo2.references.classic_ref  import InvKin
@@ -37,9 +37,12 @@ class Homing(Node):
         self.get_first_state = False
         
         # flag for command
-        self.cmd_free        = False
+        self.command_id      = None
         self.leader          = False
+        self.once            = False
         
+        # id for command id
+        self.my_id = 1
         # init_observation
         self.uMB = torch.zeros(self.njoint,1)
         
@@ -83,7 +86,7 @@ class Homing(Node):
         self.declare_parameter('joint_names', ['softleg_1_hip_joint','softleg_1_knee_joint'])
         self.declare_parameter('topic.joint_state', '/state_broadcaster/joint_states')
         self.declare_parameter('topic.command', '/command')
-        self.declare_parameter('topic.command_fl', 'command_bool')
+        self.declare_parameter('topic.command_id', '/command_id')
         self.declare_parameter('task.duration', 1.0)
         self.declare_parameter('task.wait_t', 5.0)
         self.declare_parameter('task.post_wait_t', 1.0)
@@ -95,7 +98,7 @@ class Homing(Node):
         self.joint_names       = self.get_parameter('joint_names').get_parameter_value().string_array_value
         self.topic_joint_state = self.get_parameter('topic.joint_state').get_parameter_value().string_value
         self.topic_command     = self.get_parameter('topic.command').get_parameter_value().string_value
-        self.topic_command_fl  = self.get_parameter('topic.command_fl').get_parameter_value().string_value
+        self.topic_command_id  = self.get_parameter('topic.command_id').get_parameter_value().string_value
         self.duration          = self.get_parameter('task.duration').get_parameter_value().double_value
         self.wait_t            = self.get_parameter('task.wait_t').get_parameter_value().double_value
         self.post_wait_t       = self.get_parameter('task.post_wait_t').get_parameter_value().double_value
@@ -122,9 +125,8 @@ class Homing(Node):
         self.command_pub  = self.create_publisher(JointsCommand, self.topic_command, qos)
         self.uMB_pub      = self.create_publisher(JointState, 'uMB', qos)
         self.ref_pub      = self.create_publisher(JointTrajectory, 'reference', qos)
-        self.bool_fl_pub  = self.create_publisher(MSG_Bool, self.topic_command_fl, qos)
         self.state_sub    = self.create_subscription(JointsStates, self.topic_joint_state, self.joint_state_callback, qos)
-        self.bool_fl_sub  = self.create_subscription(MSG_Bool, self.topic_command_fl, self.bool_fl_callback, qos)
+        self.bool_fl_sub  = self.create_subscription(MSG_int, self.topic_command_id, self.bool_fl_callback, qos)
 
         # set timer for command callback
         self.timer_command = self.create_timer(1.0 / self.rate, self.command_callback)
@@ -170,13 +172,7 @@ class Homing(Node):
     def joint_state_callback(self, msg:JointsStates):
         """ Get positions, velocities, accelerations* of joints. """
         
-        time = self.get_clock().now().nanoseconds / 1e9
-        restart_fl = True
-        
-        # check if first_state is get and if the node is leader (i.e. can publish command)
-        if self.get_first_state and self.leader:
-            restart_fl = False
-        
+
         # msg.position could contain different joint_names, loop all
         for i in range(len(msg.position)):
             
@@ -189,60 +185,59 @@ class Homing(Node):
                     self.joint_pos[msg.name[i]] = msg.position[i]
                     self.joint_vel[msg.name[i]] = msg.velocity[i]
                     
-                    if restart_fl:
-                        self.get_first_state        = True
-                        self.startup_time           = time
+                    self.get_first_state        = True
         
+    
+    def bool_fl_callback(self, msg:MSG_int):
+        """ Get state of command topic (True if free, False if occupied). """
+        
+        self.command_id = msg.data
+    
         # check if command topic is free
-        if not self.cmd_free:
+        if self.command_id == self.my_id:
             self.leader = True
         else:
             self.leader = False
-    
-    def bool_fl_callback(self, msg:MSG_Bool):
-        """ Get state of command topic (True if free, False if occupied). """
-        
-        self.cmd_free = msg.data
-    
+            # reset the flag to reconsider new inital point and not to enter in trajectory control loop
+            self.start_traj = False
+            
     # ------------------------------- PUBLISHER ------------------------------ #
     
     def command_callback(self):
         """ Callback function for inference timer. Infers joints target_pos from model and publishes it. """
         
         time = self.get_clock().now()
-        
-        msg             = MSG_Bool()
-        msg_traj        = JointTrajectoryPoint()
-        msg_traj.velocities    = torch.zeros(self.njoint).tolist()
-        msg_traj.accelerations = torch.zeros(self.njoint).tolist()
-        
+
         if self.get_first_state:
             
             # actual q
             q = torch.asarray([self.joint_pos[key] for key in self.joint_names]).view(-1,1)
             
+            # NOTE: Gravity Compensation
+            G_vec     = self.robot.getGravity(q=q)
+            self.uMB  = G_vec.clone()
+            self.uMB_msg.effort = self.uMB.flatten().tolist()
+            
+            # standard command -> only gravity compensation
+            command   = G_vec.flatten().tolist()
+            
             if self.leader:
+
+                msg_traj        = JointTrajectoryPoint()
+                msg_traj.velocities    = torch.zeros(self.njoint).tolist()
+                msg_traj.accelerations = torch.zeros(self.njoint).tolist()
                 
-                # NOTE: Gravity Compensation
-                G_vec     = self.robot.getGravity(q=q)
-                self.uMB  = G_vec.clone()
-                self.uMB_msg.effort = self.uMB.flatten().tolist()
-                
-                # standard command -> only gravity compensation
-                command   = G_vec.flatten().tolist()
+                if not self.start_traj:
+                    # save initial joint position
+                    self.startup_time = time.nanoseconds / 1e9
+                    self.qi           = self._angle_normalize(q)
+                    self.start_traj   = True
+                    self.once         = False
+                    self.get_logger().info(f'Start trajectory from position qi: {self.qi.flatten().tolist()}')
                 
                 # get actual time and delta_t for trajectory
                 current_t = time.nanoseconds / 1e9
                 delta_t   = current_t - self.startup_time - self.wait_t
-                
-                # send that this node occupied command topic (cmd.free is set 0)
-                msg.data = False
-                
-                if not self.start_traj:
-                    # save initial joint position
-                    self.qi         = self._angle_normalize(q)
-                    self.start_traj = True
-                    self.get_logger().info(f'Start trajectory from position qi: {self.qi.flatten().tolist()}')
                 
                 # mantain initial position
                 if delta_t < 0.0:
@@ -285,22 +280,11 @@ class Homing(Node):
                     # reference
                     msg_traj.positions = self.qf.flatten().tolist()
                     
-                    # set command flag to 1, this node not publish command
-                    # NOTE: set topic command_fl to 0 to restart to publish command
-                    if self.leader:
+                    if not self.once:
                         # enter in if loop only 1 time
-                        msg.data        = True
-                        self.get_logger().info(f'Trajectory Control Finished at position qf: {self.qf.flatten().tolist()}')
-                    
-                    # reset the flag to reconsider new inital point and not to enter in trajectory control loop
-                    self.start_traj = False
-                    self.leader     = False
-                    
-                    # NOTE: PD command
-                    self.command_msg.position = self.qf.flatten().tolist()
-                    # reference
-                    msg_traj.positions = self.qf.flatten().tolist()
-                    
+                        self.get_logger().info(f'Trajectory Control Finished at position qf: {q.flatten().tolist()}')
+                        self.once = True
+                
                 else:
                     self.get_logger().fatal('THIS OPTION IS NOT POSSIBLE')
                 
@@ -314,7 +298,6 @@ class Homing(Node):
                 self.uMB_pub.publish(self.uMB_msg)
                 
                 # real command
-                self.bool_fl_pub.publish(msg)
                 self.command_msg.effort       = command
                 self.command_msg.header.stamp = time.to_msg()
                 self.command_pub.publish(self.command_msg)

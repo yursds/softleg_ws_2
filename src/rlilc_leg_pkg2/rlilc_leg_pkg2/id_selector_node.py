@@ -1,5 +1,5 @@
-# id 0 -> homing task
-# id 1 -> rlilc task
+# id 1 -> homing task
+# id 2 -> rlilc task
 
 import rclpy
 from rclpy.node                         import Node
@@ -10,7 +10,7 @@ class Command_Channel_ID(Node):
     
     def __init__(self):
         
-        super().__init__(node_name='command_channel_id')
+        super().__init__(node_name='id_selector_node')
         
         # Setup node
         self._parser_parameter_node()
@@ -21,7 +21,7 @@ class Command_Channel_ID(Node):
         self.msg.data = 0
         
         # init startup time
-        self.startup_time = self.get_clock().now()
+        self.startup_time = self.get_clock().now().nanoseconds / 1e9
     
     def _parser_parameter_node(self):
         """ Parser parameters of the node, using loaded .yaml file or default values. """
@@ -51,18 +51,16 @@ class Command_Channel_ID(Node):
     def command_id_callback(self):
         """ Callback function for inference timer. Infers joints target_pos from model and publishes it. """
         
-        time    = self.get_clock().now()
+        time    = self.get_clock().now().nanoseconds / 1e9
         delta_t = time - self.startup_time
-        data    = 0
         
-        if delta_t > 0.0 and delta_t < self.homing_T:
-            data = 1
-        elif delta_t < self.homing_T + self.rlilc_T:
-            data = 2
+        if delta_t >= 0.0 and delta_t <= self.homing_T:
+            self.msg.data = 1
+        elif delta_t <= self.homing_T + self.rlilc_T:
+            self.msg.data = 2
         else:
-            self.startup_time = self.get_clock().now()
+            self.startup_time = self.get_clock().now().nanoseconds / 1e9
         
-        self.msg.data = data
         self.command_id_pub.publish(self.msg)
 
 

@@ -28,6 +28,7 @@ setup(
         'console_scripts': [
             'trajectory_node = rlilc_leg_pkg2.trajectory_node:main',
             'fake_pd_node  =  rlilc_leg_pkg2.fake_pd_node:main',
+            'id_selector_node=  rlilc_leg_pkg2.id_selector_node:main',
             'command_rlilc_node  =  rlilc_leg_pkg2.command_rlilc_node:main',
             'homing_node  =  rlilc_leg_pkg2.homing_node:main',
             'real_command_rlilc_node  =  rlilc_leg_pkg2.real_command_rlilc_node:main',

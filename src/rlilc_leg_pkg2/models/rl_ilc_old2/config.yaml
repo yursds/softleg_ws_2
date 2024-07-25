@@ -1,6 +1,6 @@
 chunks: 16
 env_id: Env_ros
-extra: ''
+extra: rw_e = -6.0 *e^2, reward for last position 10*e^2, reward for first action
 f_robot: 100
 fl_noILC: false
 info: multi task

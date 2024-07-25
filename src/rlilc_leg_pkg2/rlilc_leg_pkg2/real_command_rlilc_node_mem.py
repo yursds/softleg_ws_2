@@ -8,6 +8,7 @@ import numpy as np
 
 from rclpy.node                         import Node
 from sensor_msgs.msg                    import JointState
+from pi3hat_moteus_int_msgs.msg         import JointsCommand, JointsStates
 from trajectory_msgs.msg                import JointTrajectoryPoint, JointTrajectory
 from std_msgs.msg                       import Int8 as MSG_int
 
@@ -21,7 +22,7 @@ class Command_Generator(Node):
     
     def __init__(self):
         
-        super().__init__(node_name='command_rlilc_node')
+        super().__init__(node_name='real_command_rlilc_node')
         
         # setup node
         self._parser_parameter_node()
@@ -31,11 +32,16 @@ class Command_Generator(Node):
         self.njoint = len(self.joint_names)
         
         # Initialize buffers as dicts, so it's independent of the order of the joints
-        self.joint_pos      = {self.joint_names[i]:None for i in range(self.njoint)}
-        self.joint_vel      = {self.joint_names[i]:0.0 for i in range(self.njoint)}
-        self.joint_acc      = {self.joint_names[i]:0.0 for i in range(self.njoint)}
-        self._joint_vel_old = {self.joint_names[i]:0.0 for i in range(self.njoint)}
-        self.uTot_old       = {self.joint_names[i]:0.0 for i in range(self.njoint)}
+        # self.joint_pos      = {self.joint_names[i]:None for i in range(self.njoint)}
+        # self.joint_vel      = {self.joint_names[i]:0.0 for i in range(self.njoint)}
+        # self.joint_acc      = {self.joint_names[i]:0.0 for i in range(self.njoint)}
+        # self._joint_vel_old = {self.joint_names[i]:0.0 for i in range(self.njoint)}
+        # self.uTot_old       = {self.joint_names[i]:0.0 for i in range(self.njoint)}
+        self.joint_pos      = torch.zeros(self.njoint,1)
+        self.joint_vel      = torch.zeros(self.njoint,1)
+        self.joint_acc      = torch.zeros(self.njoint,1)
+        self._joint_vel_old = torch.zeros(self.njoint,1)
+        self.uTot_old       = torch.zeros(self.njoint,1)
         self._time_old      = None
         
         # additional flags
@@ -53,20 +59,22 @@ class Command_Generator(Node):
         # init_observation
         samples             = int(self.duration*self.rate_policy) + 1
         self.scaling        = int(self.rate / self.rate_policy)
-        self.uRL            = torch.zeros(self.njoint,1)
-        self.uILC           = torch.zeros(self.njoint,1)
+        self.uRL_tmp        = torch.zeros(self.njoint,1)
+        self.uILC_tmp       = torch.zeros(self.njoint,1)
         self.uMB            = torch.zeros(self.njoint,1)
         
         self.mem_count      = 0
-        self.uRL_old_ep_ts  = torch.zeros(self.njoint,1,samples)
-        self.uILC_old_ep_ts = torch.zeros(self.njoint,1,samples)
-        self.uRL_old        = torch.zeros(self.njoint,1)
-        self.uILC_old       = torch.zeros(self.njoint,1)
+        self.uRL_old_ep_ts  = torch.zeros(self.njoint, 1, samples)
+        self.uILC_old_ep_ts = torch.zeros(self.njoint, 1, samples)
+        self.uFB_old_ep_ts = torch.zeros(self.njoint, 1, samples)
+        self.uRL_old2       = torch.zeros(self.njoint, 1)
+        self.uRL_old        = torch.zeros(self.njoint, 1)
+        self.uILC_old       = torch.zeros(self.njoint, 1)
         
-        ldde = torch.tensor(self.ldde*self.rate_policy)
-        lde  = torch.tensor(self.lde*self.rate_policy)
-        le   = torch.tensor(self.le*self.rate_policy)
         
+        le   = torch.tensor(self.le).view(-1,1)*self.rate_policy
+        lde  = torch.tensor(self.lde).view(-1,1)*self.rate_policy
+        ldde = torch.tensor(self.ldde).view(-1,1)*self.rate_policy
         # build: rl model, robot, ilc
         self.rl_model = build_sb3_rl_model(self.model_rl_path)
         self._build_spec()
@@ -76,16 +84,16 @@ class Command_Generator(Node):
         
         q_init = torch.zeros(2,1)
         self.robot.setState(q=q_init)
-        # # istance model based of robot
+        # istance model based of robot
         # trasl, _ = self.robot.getForwKinEE(q = torch.zeros(2,1))      # if you want set w.r.t. current position, move these lines to self.joint_state_callback
         # pf       = (torch.tensor(self.pf)).view(-1,1) + trasl
-        # # inv      = InvKin(robot = self.robot, pf = pf)
-        # # self.qf  = self._angle_normalize(inv.get_q())
+        # inv      = InvKin(robot = self.robot, pf = pf)
+        # self.qf  = self._angle_normalize(inv.get_q())
         # del inv
-        
         self.qf = torch.tensor(self.pf).view(-1,1)
+        
         # init msg to publish
-        self.command_msg      = JointState()
+        self.command_msg      = JointsCommand()
         self.uRL_msg          = JointState()
         self.uILC_msg         = JointState()
         self.uRL_fut_msg      = JointState()
@@ -98,9 +106,14 @@ class Command_Generator(Node):
         self.uMB_msg.name     = self.joint_names
         self.command_msg.name = self.joint_names
         
+        # this is what I am publishing 
+        self.joint_kp = np.array([0.025, 0.025])/20*0
+        self.joint_kd = np.array([0.25, 0.25])/2
+        self.command_msg.kp_scale = self.joint_kp.tolist()
+        self.command_msg.kd_scale = self.joint_kd.tolist()
+        
         self.fake_err_msg     = JointState()
         self.fake_err_msg.name  = self.joint_names
-        
         # initialize empty point for trajectory
         self.ref_msg = JointTrajectory()
         self.ref_msg.joint_names = self.joint_names
@@ -133,9 +146,9 @@ class Command_Generator(Node):
         self.declare_parameter('model_rl_path', abs_path+'/../models/rl_ilc/best_model.zip')
         self.declare_parameter('urdf_path', abs_path+'/GymPinTo2/robots/robot_models/softleg_urdf/urdf/softleg-rlilc_no_mesh.urdf')
         
-        self.declare_parameter('controller_gain.ilc.le', 0.0002)
-        self.declare_parameter('controller_gain.ilc.lde', 0.0004)
-        self.declare_parameter('controller_gain.ilc.ldde', 0.0008)
+        self.declare_parameter('controller_gain.ilc.le', [0.0, 0.0])
+        self.declare_parameter('controller_gain.ilc.lde', [0.0, 0.0])
+        self.declare_parameter('controller_gain.ilc.ldde', [0.0, 0.0])
         
         self.declare_parameter('flag.ilc', True)
         self.declare_parameter('flag.rl', True)
@@ -155,9 +168,9 @@ class Command_Generator(Node):
         self.rate_policy       = self.get_parameter('rate.policy').get_parameter_value().double_value
         self.urdf_path         = self.get_parameter('urdf_path').get_parameter_value().string_value
         
-        self.le                = self.get_parameter('controller_gain.ilc.le').get_parameter_value().double_value
-        self.lde               = self.get_parameter('controller_gain.ilc.lde').get_parameter_value().double_value
-        self.ldde              = self.get_parameter('controller_gain.ilc.ldde').get_parameter_value().double_value
+        self.le                = self.get_parameter('controller_gain.ilc.le').get_parameter_value().double_array_value
+        self.lde               = self.get_parameter('controller_gain.ilc.lde').get_parameter_value().double_array_value
+        self.ldde              = self.get_parameter('controller_gain.ilc.ldde').get_parameter_value().double_array_value
         
         self.flag_ILC          = self.get_parameter('flag.ilc').get_parameter_value().bool_value
         self.flag_RL           = self.get_parameter('flag.rl').get_parameter_value().bool_value
@@ -166,16 +179,19 @@ class Command_Generator(Node):
         self.declare_parameter('env.q_max', [3.1415927, 3.1415927])
         self.declare_parameter('env.dq_max', [15.0, 15.0])
         self.declare_parameter('env.ddq_max', [15.0, 15.0])
-        self.declare_parameter('env.u_max', [0.05, 0.005])
+        self.declare_parameter('env.u_obs', [5.0, 5.0])
+        self.declare_parameter('env.u_max', [2.0, 2.0])
         self.__qmax   = torch.tensor(self.get_parameter('env.q_max').get_parameter_value().double_array_value).view(-1,1)
         self.__dqmax  = torch.tensor(self.get_parameter('env.dq_max').get_parameter_value().double_array_value).view(-1,1)
         self.__ddqmax = torch.tensor(self.get_parameter('env.ddq_max').get_parameter_value().double_array_value).view(-1,1)
+        self.__uobs   = torch.tensor(self.get_parameter('env.u_max').get_parameter_value().double_array_value).view(-1,1)
         self.__umax   = torch.tensor(self.get_parameter('env.u_max').get_parameter_value().double_array_value).view(-1,1)
         
         # logging
         self.get_logger().info(f'Joints name: {self.joint_names}')
         self.get_logger().info(f'Topic Joint State: {self.topic_joint_state}')
         self.get_logger().info(f'Topic Command: {self.topic_command}')
+        #self.get_logger().info(f'Topic Feedback: {self.topic_command}')
         self.get_logger().info(f'Duration: {self.duration}')
         self.get_logger().info(f'Pre Wait Time: {self.wait_t}, Post Wait Time: {self.post_wait_t}')
         self.get_logger().info(f'Final Point: {self.pf}')
@@ -185,13 +201,13 @@ class Command_Generator(Node):
         self.get_logger().info(f'URDF Path: {self.urdf_path}')
         self.get_logger().info(f'ILC learning gains -> le:{self.le}, lde:{self.lde}, ldde:{self.ldde}')
         self.get_logger().info(f'Falg ILC:{self.flag_ILC}, flag RL:{self.flag_RL}')
-    
+        
     def _build_pub_sub(self):
         """ Init publisher, subscription and timers. """
         
         # quality of service, publisher and subscription
         qos = 10
-        self.command_pub  = self.create_publisher(JointState, self.topic_command, qos)
+        self.command_pub  = self.create_publisher(JointsCommand, self.topic_command, qos)
         self.uRL_pub      = self.create_publisher(JointState, 'uRL', qos)
         self.uILC_pub     = self.create_publisher(JointState, 'uILC', qos)
         self.uRL_fut_pub  = self.create_publisher(JointState, 'uRL_fut', qos)
@@ -199,7 +215,7 @@ class Command_Generator(Node):
         self.uMB_pub      = self.create_publisher(JointState, 'uMB', qos)
         self.ref_pub      = self.create_publisher(JointTrajectory, 'reference', qos)
         self.err_ilc_pub  = self.create_publisher(JointState, 'error_ILC', qos)
-        self.state_sub    = self.create_subscription(JointState, self.topic_joint_state, self.joint_state_callback, qos)
+        self.state_sub    = self.create_subscription(JointsStates, self.topic_joint_state, self.joint_state_callback, qos)
         #self.feedback_sub = self.create_subscription(JointState, self.topic_feedback, self.feedback_callback, qos)
         self.bool_fl_sub  = self.create_subscription(MSG_int, self.topic_command_id, self.bool_fl_callback, qos)
         
@@ -251,13 +267,14 @@ class Command_Generator(Node):
             self.get_logger().info(f'Ho iniziato un episodiooooo!!!')
             self.ilc_ctrl.stepILC()
         
-        self.uILC     = torch.zeros(self.njoint,1)
-        self.uRL      = torch.zeros(self.njoint,1)
+        self.uILC_tmp = torch.zeros(self.njoint,1)
+        self.uRL_tmp  = torch.zeros(self.njoint,1)
+        self.uRL_old2 = torch.zeros(self.njoint,1)
         self.uRL_old  = torch.zeros(self.njoint,1)
         self.uILC_old = torch.zeros(self.njoint,1)
         self.duILC    = torch.zeros(self.njoint,1)
         self.duRL     = torch.zeros(self.njoint,1)
-
+        
         self.mem_count = 0
     
     def _step_rlilc(self, delta_t:float):
@@ -266,9 +283,9 @@ class Command_Generator(Node):
         r_, dr_, ddr_ = self._minsnap(qi = self.qi, qf = self.qf, duration = self.duration, t = delta_t)
         
         # current state
-        q   = torch.asarray([self.joint_pos[key] for key in self.joint_names]).view(-1,1)
-        dq  = torch.asarray([self.joint_vel[key] for key in self.joint_names]).view(-1,1)
-        ddq = torch.asarray([self.joint_acc[key] for key in self.joint_names]).view(-1,1)
+        q   = self.joint_pos
+        dq  = self.joint_vel
+        ddq = self.joint_acc
         
         # ====================================== ILC ======================================= #
         # current error
@@ -285,7 +302,20 @@ class Command_Generator(Node):
 
         # Update useful memory of ILC
         iM       = self.robot.getInvMass(q=q_old)
-        u_delta_ = self.uTot_old - self.uMB         # consider u_delta = PD + ILC + RL 
+        #u_delta_ = self.uTot_old - self.uMB         # consider u_delta = PD + ILC + RL         
+        # ===============0
+        # ================00
+        # NOTE
+        uFB = self.uTot_old - self.uMB - self.uRL_old - self.uILC_old
+        
+        # self.get_logger().info(f'kp : {self.joint_kp*15}')
+        # self.get_logger().info(f'kd : {self.joint_kd*2}')
+        # self.get_logger().info(f'e : {e_.flatten()}')
+        # self.get_logger().info(f'de : {de_.flatten()}')
+        # self.get_logger().info(f'kp*e : {torch.mul(torch.tensor(self.joint_kp).view(-1,1)*15,e_).flatten()}')
+        # self.get_logger().info(f'kv*de : {torch.mul(torch.tensor(self.joint_kd).view(-1,1)*2,de_).flatten()}')
+        
+        u_delta_ = uFB*0  + self.uILC_old + self.uRL_old       # consider u_delta = PD + ILC + RL 
         u_delta  = torch.matmul(iM, u_delta_)
         # update ERROR memory of ILC
         self.ilc_ctrl.updateMemError(e_=e_,de_=de_,dde_=dde_)
@@ -293,14 +323,19 @@ class Command_Generator(Node):
         self.ilc_ctrl.updateMemInput(u_delta)
 
         # get new control of ILC
-        if self.ilc_ctrl.episodes != 0:
+        if self.ilc_ctrl.episodes != 0 and self.flag_ILC:
             M    = self.robot.getMass(q=q)
             uilc = self.ilc_ctrl.getControl()
             
             if uilc.numel() != 0: 
-                self.uILC = torch.matmul(M,uilc)
+                uILC = torch.matmul(M,uilc)
+                uILC = torch.clip(uILC, max = torch.ones_like(uILC)*2, min = -torch.ones_like(uILC)*2)
             else:
-                self.uILC = self.uILC_old
+                uILC = self.uILC_old
+        else:
+            uILC = torch.zeros(self.njoint,1)
+        self.uILC_tmp = uILC
+        
         self.fake_err_msg.position = e_.flatten().tolist()
         self.fake_err_msg.velocity = de_.flatten().tolist()
         self.fake_err_msg.effort = dde_.flatten().tolist()
@@ -317,11 +352,12 @@ class Command_Generator(Node):
             idx = self.mem_count
             url_old_ep = self.uRL_old_ep_ts[:, :, idx]
             uilc_old_ep = self.uILC_old_ep_ts[:, :, idx]
+            ufb_old_ep = self.uFB_old_ep_ts[:, :, idx]
             
             obs_list  = torch.cat([
-                q.flatten(), dq.flatten(), ddq.flatten(), \
-                r_f.flatten(), dr_f.flatten(), ddr_f.flatten(), \
-                self.uRL.flatten(), url_old_ep.flatten(), uilc_old_ep.flatten()], dim=0)
+                q.flatten(), dq.flatten(), \
+                r_f.flatten(), dr_f.flatten(),\
+                self.uRL_old.flatten(), self.uRL_old2.flatten(),  uILC.flatten(), uilc_old_ep.flatten()], dim=0)
             
             obs_list = self.normalize_obs(obs_list)
             obs_list = torch.clip(obs_list, max = self._highLimO, min = self._lowLimO)         
@@ -329,15 +365,17 @@ class Command_Generator(Node):
             uRL = self.rescale_action(action)
             
             self.uRL_old_ep_ts[:, :, idx] = uRL.clone()
-            self.uILC_old_ep_ts[:, :, idx] = self.uILC.clone()
+            self.uILC_old_ep_ts[:, :, idx] = uILC.clone()
+            self.uFB_old_ep_ts[:, :, idx] = uFB.clone()
             
             self.mem_count += 1
             
             if self.flag_RL:
-                self.uRL = uRL
+                self.uRL_tmp = uRL
             else:
-                self.uRL = torch.zeros(self.njoint,1)
-                
+                self.uRL_tmp = torch.zeros(self.njoint,1)
+            
+        
         # ================================================================================== #
     
     @staticmethod
@@ -358,14 +396,12 @@ class Command_Generator(Node):
 
     # ----------------------------- SUBSCRIPTION ----------------------------- #
     
-    def joint_state_callback(self, msg:JointState):
+    def joint_state_callback(self, msg:JointsStates):
         """ Get positions, velocities, accelerations* of joints. """
         
         time = self.get_clock().now().nanoseconds / 1e9
         restart_fl = True
         
-        u_tmp = {}
-
         # check if first_state is get and if the node is leader (i.e. can publish command)
         if self.get_first_state and self.leader:
             restart_fl = False
@@ -373,34 +409,28 @@ class Command_Generator(Node):
         # msg.position could contain different joint_names, loop all
         for i in range(len(msg.position)):
             
-            if msg.name[i] in self.joint_names:
+            # check if all values are float
+            if all(not np.isnan(value) for value in msg.position) and \
+            all(not np.isnan(value) for value in msg.velocity) and \
+            all(not np.isnan(value) for value in msg.effort):
                 
-                # check if all values are float
-                if all(isinstance(value, float) for value in msg.position) and \
-                all(isinstance(value, float) for value in msg.velocity) and \
-                all(isinstance(value, float) for value in msg.effort):
-                    
-                    self.joint_pos[msg.name[i]] = msg.position[i]
-                    self.joint_vel[msg.name[i]] = msg.velocity[i]
-                    
-                    u_tmp[msg.name[i]] = msg.effort[i]
-                    
-                    # save startup time and set zero acceleration
-                    if restart_fl:
-                        self.get_first_state        = True
-                    else:
-                        # brutal derivative computation for acceleration
-                        delta_t = time - self._time_old
-                        delta_v = self.joint_vel[msg.name[i]]-self._joint_vel_old[msg.name[i]]
-                        self.joint_acc[msg.name[i]] = (delta_v)/(delta_t+1e-30)
-        
-        self.uTot_old = torch.asarray([u_tmp[key] for key in self.joint_names]).view(-1,1)
-        
-        # update variables
-        self._joint_vel_old = self.joint_vel.copy()
-        self._time_old      = time
+                self.joint_pos[i,0] = msg.position[i]
+                self.joint_vel[i,0] = msg.velocity[i]
+                self.uTot_old[i,0]  = msg.effort[i]
+                
+                # save startup time and set zero acceleration
+                if restart_fl:
+                    self.get_first_state        = True
+                else:
+                    # brutal derivative computation for acceleration
+                    delta_t = time - self._time_old
+                    delta_v = self.joint_vel[i,0]-self._joint_vel_old[i,0]
+                    self.joint_acc[i,0] = (delta_v)/(delta_t+1e-30)
     
-    # def feedback_callback(self, msg:JointState):
+        # update variables
+        self._joint_vel_old = self.joint_vel.clone()
+        self._time_old      = time
+    # def feedback_callback(self, msg:JointsStates):
     #     """ Get effort commanded to joints. """
         
     #     u_tmp = {}
@@ -420,7 +450,6 @@ class Command_Generator(Node):
         """ Get state of command topic (True if free, False if occupied). """
         
         self.command_id = msg.data
-        
         # check if command topic is free
         if self.command_id == self.my_id:
             self.leader = True
@@ -438,21 +467,21 @@ class Command_Generator(Node):
         time        = self.get_clock().now()
         uRL_interp  = torch.zeros(self.njoint,1)
         uILC_interp = torch.zeros(self.njoint,1)
-        
+                
         self.uRL_msg.effort  = torch.zeros(self.njoint,1).flatten().tolist()
         self.uILC_msg.effort = torch.zeros(self.njoint,1).flatten().tolist()
         
         if self.get_first_state:
             
             # actual q
-            q = torch.asarray([self.joint_pos[key] for key in self.joint_names]).view(-1,1)
+            q = self.joint_pos
             
             msg_traj               = JointTrajectoryPoint()
             msg_traj.velocities    = torch.zeros(self.njoint).tolist()
             msg_traj.accelerations = torch.zeros(self.njoint).tolist()
             
             # NOTE: Gravity Compensation
-            G_vec               = self.robot.getGravity(q=q)*1
+            G_vec               = self.robot.getGravity(q=q)
             self.uMB            = G_vec.clone()
             self.uMB_msg.effort = self.uMB.flatten().tolist()
         
@@ -463,7 +492,6 @@ class Command_Generator(Node):
                 
                 # save initial joint position
                 if not self.start_traj:
-                    
                     self.startup_time = time.nanoseconds / 1e9
                     self.qi           = self._angle_normalize(q).clone()
                     self.start_traj   = True
@@ -481,7 +509,8 @@ class Command_Generator(Node):
                     self.command_msg.velocity = torch.zeros(self.njoint).tolist()
                     # reference
                     msg_traj.positions = self.qi.flatten().tolist()
-                
+                    
+                    
                 # start trajectory and use RL and ILC if the node is leader
                 elif delta_t < self.duration:
                     
@@ -491,12 +520,16 @@ class Command_Generator(Node):
                     # update interpolation of law rate commands
                     uRL_interp    = (self.uRL_old + self.duRL).clone()
                     uILC_interp   = (self.uILC_old + self.duILC).clone()
+                    
+                    self.uRL_old2 = self.uRL_old.clone()
                     self.uRL_old  = uRL_interp.clone()
                     self.uILC_old = uILC_interp.clone()
                     
                     # add additional command
-                    command_add   = (uRL_interp + uILC_interp).flatten().tolist() #_interp + self.uILC_interp
-                    command       = command + command_add
+                    uRL_fake = torch.mul(uRL_interp, torch.tensor([[1,1]]).T)
+                    command_tot   = (G_vec + uRL_fake + uILC_interp).flatten().tolist() #_interp + self.uILC_interp
+                    
+                    command       = command_tot
                     
                     # NOTE: PD command
                     self.command_msg.position = r_.flatten().tolist()
@@ -531,7 +564,7 @@ class Command_Generator(Node):
                         self.once = True
                 
                 else:
-                    self.get_logger().fatal('THIS OPTION IS NOT POSSIBLE')
+                    self.get_logger().fatal('THIS OPTION IS NOT POSSIBLE')                
                 
                 # update msg data
                 self.uRL_msg.effort  = uRL_interp.flatten().tolist()
@@ -559,10 +592,10 @@ class Command_Generator(Node):
     
     def rlilc_callback(self):
         
-        self.uILC   = torch.zeros(self.njoint,1)
-        self.uRL    = torch.zeros(self.njoint,1)
-        self.duILC  = torch.zeros(self.njoint,1)
-        self.duRL   = torch.zeros(self.njoint,1)
+        self.uILC_tmp = torch.zeros(self.njoint,1)
+        self.uRL_tmp  = torch.zeros(self.njoint,1)
+        self.duILC    = torch.zeros(self.njoint,1)
+        self.duRL     = torch.zeros(self.njoint,1)
         
         time = self.get_clock().now()
         
@@ -575,19 +608,19 @@ class Command_Generator(Node):
                 
                 self._step_rlilc(delta_t=delta_t)
             
-            self.duILC = self._resample_u(u_old=self.uILC_old, u_new=self.uILC, num_step = self.scaling)
-            self.duRL  = self._resample_u(u_old=self.uRL_old, u_new=self.uRL, num_step = self.scaling)
-        
+            self.duILC = self._resample_u(u_old=self.uILC_old, u_new=self.uILC_tmp, num_step = self.scaling)
+            self.duRL  = self._resample_u(u_old=self.uRL_old, u_new=self.uRL_tmp, num_step = self.scaling)
+    
         # update msg data
-        self.uRL_fut_msg.effort  = self.uRL.flatten().tolist()
-        self.uILC_fut_msg.effort = self.uILC.flatten().tolist()
+        self.uRL_fut_msg.effort  = self.uRL_tmp.flatten().tolist()
+        self.uILC_fut_msg.effort = self.uILC_tmp.flatten().tolist()
         
         self.uILC_fut_msg.header.stamp = time.to_msg()
         self.uILC_fut_pub.publish(self.uILC_fut_msg)
         
         self.uRL_fut_msg.header.stamp  = time.to_msg()
         self.uRL_fut_pub.publish(self.uRL_fut_msg)
-        
+    
     # ------------------------------------------------------------------------- #
     # TODO: move to a class or utils folder
     def _build_spec(self):
@@ -600,6 +633,8 @@ class Command_Generator(Node):
         dq_min   = -dq_max
         ddq_max  = self.__ddqmax
         ddq_min  = -ddq_max
+        u_maxobs = self.__uobs
+        u_minobs = -u_maxobs
         u_max    = self.__umax
         u_min    = -u_max
         
@@ -608,17 +643,17 @@ class Command_Generator(Node):
         self._lowLimA    = u_min.flatten()
         self._highLimA   = u_max.flatten()
         
-        # observation -> [q dq ddq] [ref dref ddref] [uRL] [uRLold uILCold]
+        # observation -> [q dq ddq] [ref dref ddref] [uRL] [uILC uILCold]
         self._lowLimO    = torch.as_tensor(
             torch.cat([
-                q_min, dq_min, ddq_min,
-                q_min, dq_min, ddq_min,
-                u_min, u_min, u_min], dim=0)).flatten()
+                q_min, dq_min,
+                q_min, dq_min,
+                u_minobs, u_minobs, u_minobs, u_minobs], dim=0)).flatten()
         self._highLimO   = torch.as_tensor(
             torch.cat([
-                q_max, dq_max, ddq_max,
-                q_max, dq_max, ddq_max,
-                u_max, u_max, u_max], dim=0)).flatten()
+                q_max, dq_max,
+                q_max, dq_max,
+                u_maxobs, u_maxobs, u_maxobs, u_maxobs], dim=0)).flatten()
     
     def rescale_action(self, u_np:np.ndarray) -> torch.Tensor:
         """

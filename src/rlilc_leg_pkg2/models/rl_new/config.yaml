@@ -1,6 +1,6 @@
 chunks: 16
-env_id: Env_ros
-extra: ''
+env_id: Env_new2
+extra: rw_law -6, no RL in ILC
 f_robot: 100
 fl_noILC: false
 info: multi task

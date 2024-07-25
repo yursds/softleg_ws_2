@@ -1,24 +1,18 @@
-chunks: 16
-env_id: Env_ros
-extra: ''
+chunks: 8
+env_id: EnvRLILCMJC_ros
+extra: new mjc model
 f_robot: 100
 fl_noILC: false
 info: multi task
 kp: 0.4
 kv: 0.25
-ldde: 0.0
+ldde: 0.08
 lde: 0.04
 le: 0.02
-n_envs: 64
+n_envs: 16
 n_ep_reset: 5
 n_update: 200
-pi:
-- 64
-- 64
 scaling: 2
 seed: 42
 stayT: 0.0
 taskT: 1.0
-vf:
-- 64
-- 64

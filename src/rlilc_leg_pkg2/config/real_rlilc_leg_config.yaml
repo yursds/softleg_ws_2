@@ -1,0 +1,78 @@
+# # config.yaml
+# parameters of node
+# NOTE: some nodes need robot urdf path and rl_model_path, set them on launch file
+
+real_command_rlilc_node:
+  
+  ros__parameters:
+    
+    joint_names: ['HIP', 'KNEE']
+    
+    topic:
+      joint_state : '/state_broadcaster/joints_state'
+      command     : '/joint_controller/command'
+      command_id  : '/command_id'
+    
+    task:
+      duration    : 1.0   # NOTE consider to modify id_selector_node parameter
+      wait_t      : 1.0
+      post_wait_t : 0.0
+      pf          : [1.5707, -1.5707]
+      #pf          : [0.0, 0.0]
+    
+    rate: 
+      command: 100.0
+      policy: 50.0
+    
+    env:
+      q_max   : [3.1415927, 3.1415927]
+      dq_max  : [50.0, 50.0]
+      ddq_max : [15.0, 15.0]
+      u_obs   : [5.0, 5.0]
+      u_max   : [2.0, 2.0]
+    
+    controller_gain:
+      ilc:
+        le: [0.5, 5.0] #0.0002
+        lde: [0.0, 0.0] #0.0004
+        ldde: [0.0, 0.0]
+        # le: [4.0, 20.0] #0.0002
+        # lde: [0.8, 4.0] #0.0004
+        # ldde: [0.0, 0.0]
+  
+    flag:
+      ilc: true
+      rl:  true # false
+
+real_homing_node:
+  
+  ros__parameters:
+    
+    joint_names: ['HIP', 'KNEE']
+    
+    topic:
+      joint_state : '/state_broadcaster/joints_state'
+      command     : '/joint_controller/command'
+      command_id  : '/command_id'
+    
+    task:
+      duration    : 3.0     # NOTE consider to modify id_selector_node parameter
+      wait_t      : 1.0
+      post_wait_t : 0.0
+      pf          : [0.0, 0.0]
+    
+    rate: 
+      command: 200.0
+
+id_selector_node:
+
+  ros__parameters:
+
+    topic:
+      command_id: '/command_id'
+    
+    task:
+      duration_rlilc  : 3.0 # NOTE consider to modify command_rlilc_node parameter
+      duration_homing : 5.0 # NOTE consider to modify homing_node parameter
+  
+    rate : 200.0

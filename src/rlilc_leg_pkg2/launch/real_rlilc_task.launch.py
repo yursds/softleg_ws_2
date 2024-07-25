@@ -18,18 +18,21 @@ from launch.substitutions           import LaunchConfiguration
 
 def generate_launch_description():
     
-    urdf_file                   = 'leg_constrained.urdf'
     description_pkg_path        = get_package_share_directory('mulinex_description')
+    urdf_file                   = 'leg_constrained.urdf'
     softleg_description_path    = os.path.join(description_pkg_path, 'urdf', urdf_file)
     
     # setup variables path
-    folder_ctrl_param = 'config' # contain simulation flag
-    traj_config       = 'rlilc_leg_config.yaml'
-    path_pkg          = get_package_share_directory('rlilc_leg_pkg2')
+    pkg_path       = get_package_share_directory('rlilc_leg_pkg2')
+    task_config    = 'real_rlilc_leg_config.yaml'
+    #rl_model       = 'rl_ilc/best_model.zip'
+    rl_model       = 'rl_new/best_model.zip' # real_command_rlilc_node_conv
     
-    # definition of controller parameters, modelRL_path, configRL_path
-    ctrl_params    = os.path.join(path_pkg, folder_ctrl_param, traj_config)
-
+    # definition of controller parameters, modelRL_path
+    task_params    = os.path.join(pkg_path, 'config', task_config)
+    model_rl_path  = os.path.join(pkg_path, 'models', rl_model)
+    
+    # name of rosbag
     main_path      = '/home/yurs/softleg_ws_2'
     current_date   = datetime.now()
     day            = current_date.day
@@ -41,13 +44,23 @@ def generate_launch_description():
     path           = os.path.join(main_path, "rosbag", formatted_date)
     
     exp = LaunchConfiguration('exp', default=path)
-
+    
+    # ExecuteProcess(
+    #         cmd=['ros2', 'control', 'load_controller', 'joint_controller', '--set-state', 'active'],
+    #         shell=True
+    #     ),
+    # ExecuteProcess(
+    #     cmd=['ros2', 'control', 'load_controller', 'state_broadcaster', '--set-state', 'active'],
+    #     shell=True
+    # ),
+    
     # node id selector
     id_selector = Node(
         package    = 'rlilc_leg_pkg2',
         name       = 'id_selector_node',        # the name is set in the main of inference_ctrl_node_sim
         executable = 'id_selector_node',    # the name of executable is set in setup.py
-        parameters = [],
+        parameters = [
+            task_params,],
         output     = "screen"
     )
     
@@ -57,8 +70,9 @@ def generate_launch_description():
         name       = 'real_command_rlilc_node',        # the name is set in the main of inference_ctrl_node_sim
         executable = 'real_command_rlilc_node',    # the name of executable is set in setup.py
         parameters = [
+            {'model_rl_path': model_rl_path},
             {'urdf_path': softleg_description_path},
-            ctrl_params,
+            task_params,
             ],
         output     = "screen"
     )
@@ -70,7 +84,7 @@ def generate_launch_description():
         executable = 'real_homing_node',    # the name of executable is set in setup.py
         parameters = [
             {'urdf_path': softleg_description_path},
-            ctrl_params,
+            task_params,
             ],
         output     = "screen"
     )

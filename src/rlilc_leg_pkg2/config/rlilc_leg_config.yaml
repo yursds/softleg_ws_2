@@ -1,3 +1,4 @@
+# # config.yaml
 # parameters of node
 # NOTE: some nodes need robot urdf path and rl_model_path, set them on launch file
 
@@ -17,7 +18,7 @@ command_rlilc_node:
       duration    : 5.0   # NOTE consider to modify id_selector_node parameter
       wait_t      : 1.0
       post_wait_t : 1.0
-      pf          : [-0.15, 0.15]
+      pf          : [1.5707, 1.5707]
     
     rate: 
       command: 200.0
@@ -33,8 +34,11 @@ command_rlilc_node:
       ilc:
         le: 0.0002
         lde: 0.0004
-        ldde: 0.0008
-  
+        ldde: 0.0
+
+    flag:
+      ilc: true
+      rl:  true
 
 homing_node:
   
@@ -58,11 +62,13 @@ homing_node:
 
 id_selector_node:
 
-  topic:
-    command_id: '/command_id'
-  
-    task:
-      duration_homing : 10.0 # NOTE consider to modify command_rlilc_node parameter
-      duration_rlilc  : 10.0 # NOTE consider to modify homing_node parameter
-  
-  rate : 200.0
+  ros__parameters:
+
+    topic:
+      command_id: '/command_id'
+    
+      task:
+        duration_homing : 10.0 # NOTE consider to modify command_rlilc_node parameter
+        duration_rlilc  : 10.0 # NOTE consider to modify homing_node parameter
+    
+    rate : 100.0

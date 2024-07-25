@@ -45,17 +45,21 @@ class Homing(Node):
         # init_observation
         self.uMB = torch.zeros(self.njoint,1)
         
+        q_init = torch.zeros(2,1)
+        
         # build: robot
         self.robot = Sim_RR(urdf_path=self.urdf_path, ee_name='LH_ANKLE')
+        self.robot.setState(q=q_init)
         
         # istance model based of robot
-        trasl, _ = self.robot.getForwKinEE(q = torch.zeros(2,1))      # if you want set w.r.t. current position, move these lines to self.joint_state_callback
-        pf       = (torch.tensor(self.pf)).view(-1,1) + trasl
-        inv      = InvKin(robot = self.robot, pf = pf)
-        self.qf  = self._angle_normalize(inv.get_q())
-        del inv
+        # trasl, _ = self.robot.getForwKinEE(q = torch.zeros(2,1))      # if you want set w.r.t. current position, move these lines to self.joint_state_callback
+        # pf       = (torch.tensor(self.pf)).view(-1,1) + trasl
+        # inv      = InvKin(robot = self.robot, pf = pf)
+        # self.qf  = self._angle_normalize(inv.get_q())
+        # del inv
         
         
+        self.qf = torch.tensor(self.pf).view(-1,1)
         # init msg to publish
         self.command_msg      = JointState()
         self.uMB_msg          = JointState()

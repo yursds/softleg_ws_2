@@ -1,0 +1,18 @@
+chunks: 8
+env_id: EnvRLinILC
+f_robot: 100
+fl_noILC: true
+info: 'ILC is not used during the training. multi task: points in the circle with
+  radius 0.15 with center in -0.15 w.r.t ee'
+kp: 0.04
+kv: 0.025
+ldde: 0.0008
+lde: 0.0004
+le: 0.0002
+n_envs: 16
+n_ep_reset: 5
+n_update: 200
+noise_q: 0.0
+scaling: 2
+seed: 42
+taskT: 3.0

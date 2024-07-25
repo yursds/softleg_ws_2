@@ -29,9 +29,11 @@ class Homing(Node):
         self.njoint = len(self.joint_names)
         
         # Initialize buffers as dicts, so it's independent of the order of the joints
-        self.joint_pos      = {self.joint_names[i]:None for i in range(self.njoint)}
-        self.joint_vel      = {self.joint_names[i]:0.0 for i in range(self.njoint)}
+        # self.joint_pos      = {self.joint_names[i]:None for i in range(self.njoint)}
+        # self.joint_vel      = {self.joint_names[i]:0.0 for i in range(self.njoint)}
         
+        self.joint_pos      = torch.zeros(self.njoint,1)
+        self.joint_vel      = torch.zeros(self.njoint,1)
         # additional flags
         self.start_traj      = False
         self.get_first_state = False
@@ -46,15 +48,19 @@ class Homing(Node):
         # init_observation
         self.uMB = torch.zeros(self.njoint,1)
         
+        q_init = torch.zeros(2,1)
+        
         # build: robot
         self.robot = Sim_RR(urdf_path=self.urdf_path, ee_name='LH_ANKLE')
         
         # istance model based of robot
-        trasl, _ = self.robot.getForwKinEE(q = torch.zeros(2,1))      # if you want set w.r.t. current position, move these lines to self.joint_state_callback
-        pf       = (torch.tensor(self.pf)).view(-1,1) + trasl
-        inv      = InvKin(robot = self.robot, pf = pf)
-        self.qf  = self._angle_normalize(inv.get_q())
-        del inv
+        #trasl, _ = self.robot.getForwKinEE(q = q_init)      # if you want set w.r.t. current position, move these lines to self.joint_state_callback
+        self.robot.setState(q=q_init)
+        # pf       = (torch.tensor(self.pf)).view(-1,1) + trasl
+        # inv      = InvKin(robot = self.robot, pf = pf)
+        # self.qf  = self._angle_normalize(inv.get_q())
+        # del inv
+        self.qf = torch.tensor(self.pf).view(-1,1)
         
         # init msg to publish
         self.command_msg      = JointsCommand()
@@ -76,6 +82,8 @@ class Homing(Node):
         
         # logging
         self.get_logger().info(f'HOMING ready to start.')
+        
+        self.get_logger().info(f'\n\n\n\n Yuppi')
     
     def _parser_parameter_node(self):
         """ Parser parameters of the node, using loaded .yaml file or default values. """
@@ -172,21 +180,21 @@ class Homing(Node):
     def joint_state_callback(self, msg:JointsStates):
         """ Get positions, velocities, accelerations* of joints. """
         
-
+        tmp_pos = msg.position
+        tmp_vel = msg.velocity
         # msg.position could contain different joint_names, loop all
-        for i in range(len(msg.position)):
-            
-            if msg.name[i] in self.joint_names:
-                
-                # check if all values are float
-                if all(isinstance(value, float) for value in msg.position) and \
-                all(isinstance(value, float) for value in msg.velocity):
-                    
-                    self.joint_pos[msg.name[i]] = msg.position[i]
-                    self.joint_vel[msg.name[i]] = msg.velocity[i]
-                    
-                    self.get_first_state        = True
+        for i in range(len(tmp_pos)):
         
+            # check if all values are float
+            if all(not np.isnan(value) for value in tmp_pos) and \
+            all(not np.isnan(value) for value in tmp_vel):
+                
+                # self.joint_pos[msg.name[i]] = msg.position[i]
+                # self.joint_vel[msg.name[i]] = msg.velocity[i]
+                    
+                self.joint_pos[i,0] = tmp_pos[i]
+                self.joint_vel[i,0] = tmp_vel[i]
+                self.get_first_state = True
     
     def bool_fl_callback(self, msg:MSG_int):
         """ Get state of command topic (True if free, False if occupied). """
@@ -200,18 +208,21 @@ class Homing(Node):
             self.leader = False
             # reset the flag to reconsider new inital point and not to enter in trajectory control loop
             self.start_traj = False
-            
+    
     # ------------------------------- PUBLISHER ------------------------------ #
     
     def command_callback(self):
         """ Callback function for inference timer. Infers joints target_pos from model and publishes it. """
         
         time = self.get_clock().now()
-
+        
+        #self.get_logger().info(f'\n\n\n aaaaaaaaaaaaaaaaaaaaa')
+        
         if self.get_first_state:
             
             # actual q
-            q = torch.asarray([self.joint_pos[key] for key in self.joint_names]).view(-1,1)
+            q = self.joint_pos
+            #q = torch.asarray([self.joint_pos[key] for key in self.joint_names]).view(-1,1)
             
             # NOTE: Gravity Compensation
             G_vec     = self.robot.getGravity(q=q)
@@ -277,6 +288,7 @@ class Homing(Node):
                     
                     # NOTE: PD command
                     self.command_msg.position = self.qf.flatten().tolist()
+                    self.command_msg.velocity = torch.zeros(self.njoint).tolist()
                     # reference
                     msg_traj.positions = self.qf.flatten().tolist()
                     
@@ -287,6 +299,12 @@ class Homing(Node):
                 
                 else:
                     self.get_logger().fatal('THIS OPTION IS NOT POSSIBLE')
+                
+                if not isinstance(command[0], float):
+                    self.get_logger().fatal('Command is not a float')
+                    print(f'q {q}')
+                    print(f'G_vec {G_vec}')
+                    print(f'command {command}')
                 
                 # reference topic
                 self.ref_msg.points[0] = msg_traj

@@ -7,3 +7,4 @@ run.bash
 .*
 /plotjuggler_layout
 /rosbag
+init-mulinex_ws.txt
